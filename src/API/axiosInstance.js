@@ -5,7 +5,7 @@ import Swal from "sweetalert2";
 
 const axiosInstance = axios.create({
     // baseURL: 'https://localhost:7277/api/Bhoomi/',
-    baseURL: 'https://localhost:7049/api/eaasthi/',
+    baseURL: 'https://testapps.bbmpgov.in/LayoutKhataAPI',
     headers: {
         Accept: '*/*',  
     },
@@ -14,7 +14,7 @@ const axiosInstance = axios.create({
 // Request interceptor for adding Authorization header
 axiosInstance.interceptors.request.use(
     (config) => {
-        const accessToken = sessionStorage.getItem('accessToken');
+        const accessToken = sessionStorage.getItem('access_token');
          const isTokenRequired = sessionStorage.getItem('isTokenRequired');
         
         console.log(accessToken, "accessToken",sessionStorage.getItem('isTokenRequired'));

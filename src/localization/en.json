@@ -729,6 +729,7 @@
         "approvalNoPlaceholder":"Enter Layout Approval No",
         "scanUploadapproval":"Scan & Upload Layout Approval order",
         "fileSize&format":"[ Only PDF files are allowed, file size must be less than 5MB ]",
+        "fileSize&format50":"[ Only PDF files are allowed, file size must be less than 50MB ]",
         "scanUploadMap":"Scan & Upload Layout Approved Map",
         "dateOfApproval":"Date of Approval",
         "designation":"Designation of Approval Authority ",

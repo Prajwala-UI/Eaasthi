@@ -31,19 +31,19 @@ const EKYC_Preview = () => {
 
                         {/* Table */}
                         {/* {ekycData && ( */}
-                       <table className="table table-striped table-bordered table-hover shadow" style={{ fontFamily: 'Arial, sans-serif' }}>
-  <thead className="table-light">
-    <tr>
-      <th>ಫೋಟೋ / Photo</th>
-      <th>ಇಕೆವೈಸಿ ಪರಿಶೀಲಿಸಿದ ಆಧಾರ್ ಹೆಸರು / EKYC Verified Aadhar Name</th>
-      <th>ಇಕೆವೈಸಿ ಪರಿಶೀಲಿಸಿದ ಆಧಾರ್ ಸಂಖ್ಯೆ / EKYC Verified Aadhar Number</th>
-      <th>ಲಿಂಗ / Gender</th>
-      <th>ಹುಟ್ಟಿದ ದಿನಾಂಕ / DOB</th>
-      <th>ವಿಳಾಸ / Address</th>
-      <th>ಇಕೆವೈಸಿ ಸ್ಥಿತಿ / EKYC Status</th>
-    </tr>
-  </thead>
-  {/* <tbody>
+                        <table className="table table-striped table-bordered table-hover shadow" style={{ fontFamily: 'Arial, sans-serif' }}>
+                            <thead className="table-light">
+                                <tr>
+                                    <th>ಫೋಟೋ / Photo</th>
+                                    <th>ಇಕೆವೈಸಿ ಪರಿಶೀಲಿಸಿದ ಆಧಾರ್ ಹೆಸರು / EKYC Verified Aadhar Name</th>
+                                    <th>ಇಕೆವೈಸಿ ಪರಿಶೀಲಿಸಿದ ಆಧಾರ್ ಸಂಖ್ಯೆ / EKYC Verified Aadhar Number</th>
+                                    <th>ಲಿಂಗ / Gender</th>
+                                    <th>ಹುಟ್ಟಿದ ದಿನಾಂಕ / DOB</th>
+                                    <th>ವಿಳಾಸ / Address</th>
+                                    <th>ಇಕೆವೈಸಿ ಸ್ಥಿತಿ / EKYC Status</th>
+                                </tr>
+                            </thead>
+                            {/* <tbody>
     <tr style={{ backgroundColor: '#fff' }}>
       <td style={{ textAlign: 'center' }}>
         {ekycData.photo ? (
@@ -80,7 +80,7 @@ const EKYC_Preview = () => {
       </td>
     </tr>
   </tbody> */}
-</table>
+                        </table>
 
                         {/* )} */}
                     </div>

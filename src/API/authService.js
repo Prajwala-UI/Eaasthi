@@ -2,11 +2,45 @@
 
 import apiService from './apiService';
 import Swal from 'sweetalert2';
+import config from '../Config/config';
 
 // Access token API
-// export const getAccessToken = async (username, password) => {
-//   return await apiService.postRequest('/access-token', { userId, userRole, secretKey });
-// };
+export const getAccessToken = async () => {
+  const formData = new FormData();
+  formData.append("username", "admin");
+  formData.append("password", "admin@123");
+
+  return await apiService.postRequest('/Token', formData);
+};
+//send otp API
+export const sendOtpAPI = async (mobileNumber) => {
+  try {
+    const response = await apiService.postRequest(`${config.endpoints.send_OTP}`, {
+      mobileNumber: mobileNumber,
+      source: "Layout khata",
+    });
+    console.log("Full response inside sendOtpAPI:", response);
+    return response;
+  } catch (error) {
+    console.error("OTP Send Error:", error);
+    throw error;
+  }
+};
+//verify OTP API
+export const verifyOtpAPI = async (mobileNumber, otp) => {
+  try {
+    const response = await apiService.postRequest(`${config.endpoints.verify_OTP}`, {
+      mobileNumber,
+      otp,
+      source: "Layout khata",
+    });
+    console.log("Full response inside verifyOtpAPI:", response);
+    return response;
+  } catch (error) {
+    console.error("OTP Verification Error:", error);
+    throw error;
+  }
+};
 
 
 //District API 
@@ -14,7 +48,7 @@ export const handleFetchDistricts = async (newLanguage) => {
   try {
     sessionStorage.setItem('isTokenRequired', false);
 
-    const response = await apiService.postRequest('GetDistrictName', {}); // assuming relative path only
+    const response = await apiService.getRequest(`${config.endpoints.kaveriDistrict}`, {}); // assuming relative path only
 
     if (response.responsE_CODE === "200") {
       const modifiedDistricts = response.district.map((dist) => ({
@@ -31,13 +65,12 @@ export const handleFetchDistricts = async (newLanguage) => {
     throw err;
   }
 };
-
 //taluk API
 export const handleFetchTalukOptions = async (districtCode, language) => {
   try {
     sessionStorage.setItem('isTokenRequired', false); // mark token needed if required
 
-    const response = await apiService.postRequest('/GetTalukName', {
+    const response = await apiService.postRequest(`${config.endpoints.kaveriTaluk}`, {
       districT_CODE: String(districtCode),
     });
 
@@ -57,12 +90,11 @@ export const handleFetchTalukOptions = async (districtCode, language) => {
     throw err;
   }
 };
-
 //Hobli API
 export const handleFetchHobliOptions = async (districtCode, talukCode, language) => {
   try {
     sessionStorage.setItem('isTokenRequired', false);
-    const response = await apiService.postRequest('/GetHobliName', {
+    const response = await apiService.postRequest(`${config.endpoints.kaveriHobli}`, {
       districT_CODE: String(districtCode),
       taluK_CODE: String(talukCode),
     });
@@ -81,12 +113,11 @@ export const handleFetchHobliOptions = async (districtCode, talukCode, language)
     throw err;
   }
 };
-
 //Village API
 export const handleFetchVillageOptions = async (districtCode, talukCode, hobliCode, language) => {
   try {
     sessionStorage.setItem('isTokenRequired', false);
-    const response = await apiService.postRequest('/GetVillageName', {
+    const response = await apiService.postRequest(`${config.endpoints.kaveriVillage}`, {
       districT_CODE: String(districtCode),
       taluK_CODE: String(talukCode),
       hoblI_CODE: String(hobliCode),
@@ -106,7 +137,6 @@ export const handleFetchVillageOptions = async (districtCode, talukCode, hobliCo
     throw err;
   }
 };
-
 //GO btn fetch API
 export const handleFetchHissaOptions = async ({
   districtCode,
@@ -125,7 +155,7 @@ export const handleFetchHissaOptions = async ({
       survey_no: String(surveyNo),
     };
 
-    const response = await apiService.postRequest('/GetHissaList', payload);
+    const response = await apiService.postRequest(`${config.endpoints.kaveriHissa}`, payload);
 
     if (response?.surnoc && response?.hissaNo && response?.landCode) {
       return {
@@ -146,7 +176,6 @@ export const handleFetchHissaOptions = async ({
     throw error;
   }
 };
-
 //RTC details API
 export const fetchRTCDetailsAPI = async ({
   districtCode,
@@ -164,7 +193,7 @@ export const fetchRTCDetailsAPI = async ({
       lanD_CODE: landCode.toString(),
     };
 
-    const response = await apiService.postRequest('/GetRTCDetailsWithBhoomiVillage', payload);
+    const response = await apiService.postRequest(`${config.endpoints.kaveriFetchDetails}`, payload);
 
     if (response?.responsE_CODE === '200') {
       const parsedData = JSON.parse(response.data);
@@ -177,68 +206,40 @@ export const fetchRTCDetailsAPI = async ({
     throw error;
   }
 };
+//Survey Number first block Save API
+export const submitsurveyNoDetails = async (payload) => {
+  try {
+   
+    const response = await apiService.postRequest(`${config.endpoints.EPIDFetchDetails}`,  payload);
 
-
+     return response;
+  } catch (error) {
+    console.error("EPID Fetching Details Error:", error);
+    throw error;
+  }
+};
 
 //EPID fetching API
-
-// authService.js
-
-// export const handleFetchEPIDDetails = async (epidNumber) => {
-//   try {
-//     sessionStorage.setItem('isTokenRequired', true); // assuming this controls token usage
-
-//     const response = await apiService.postRequest('/FnGetOwnerKhataDetails', {
-//       propertyEPID: epidNumber,
-//     });
-
-//     if (response.responseCode === 200 && response.responseStatus) {
-//       const parsedResponse = JSON.parse(response.responseMessage);
-//       const approvedDetails = parsedResponse.response?.ApprovedPropertyDetails;
-
-//       if (!approvedDetails) throw new Error("No property details found");
-
-//       const owner = approvedDetails.OwnerDetails?.[0] || {};
-
-//       return {
-//         name: owner.OwnerName || "N/A",
-//         address: owner.OwnerAddress || "N/A",
-//         status: approvedDetails.PropertyClassification || "N/A",
-//         relationshipType: owner.IdentifierName || "N/A",
-//         relationName: owner.IdType || "N/A",
-//       };
-//     } else {
-//       throw new Error("EPID not found or response invalid");
-//     }
-//   } catch (err) {
-//     console.error("Error fetching EPID details:", err);
-//     throw err;
-//   }
-// };
-
-
 export const handleFetchEPIDDetails = async (epidNumber) => {
   try {
-    sessionStorage.setItem('isTokenRequired', true); // Assuming this controls token usage
+    sessionStorage.setItem('isTokenRequired', false); // Assuming this controls token usage
 
-    const response = await apiService.postRequest('/FnGetOwnerKhataDetails', {
+    const response = await apiService.postRequest(`${config.endpoints.epid}`, {
       propertyEPID: epidNumber,
     });
 
-    const parsedResponse = JSON.parse(response.responseMessage);
+    // The API returns approvedPropertyDetails inside epidKhataDetails.response
+    const parsedResponse = response.epidKhataDetails?.response;
 
-    if (parsedResponse.response?.IsValueExists === "Y") {
+    if (parsedResponse?.isValueExists === "Y") {
       if (response.responseCode === 200 && response.responseStatus === true) {
-
-
-        // Check if IsValueExists is "Y"
-        const approvedDetails = parsedResponse.response.ApprovedPropertyDetails;
+        const approvedDetails = parsedResponse.approvedPropertyDetails;
 
         if (!approvedDetails) {
           throw new Error("No property details found");
         }
 
-        return approvedDetails; // Return the entire ApprovedPropertyDetails object
+        return approvedDetails;
       } else {
         throw new Error("Please provide a correct EPID");
       }
@@ -253,5 +254,65 @@ export const handleFetchEPIDDetails = async (epidNumber) => {
   } catch (err) {
     console.error("Error fetching EPID details:", err);
     throw err;
+  }
+};
+//EPID first block Save API
+export const submitEPIDDetails = async (payload) => {
+  try {
+   
+    const response = await apiService.postRequest(`${config.endpoints.EPIDFetchDetails}`,  payload);
+
+     return response;
+  } catch (error) {
+    console.error("EPID Fetching Details Error:", error);
+    throw error;
+  }
+};
+
+
+//Approval Order API
+export const insertApprovalInfo = async (payload) => {
+  try {
+    const response = await apiService.postRequest(config.endpoints.insertApprovalInfo, payload);
+    return response;
+  } catch (error) {
+    console.error("Insert Approval Info Error:", error);
+    throw error;
+  }
+};
+
+//Approval Order List API
+export const listApprovalInfo = async ({ level, aprLkrsId, aprId }) => {
+  try {
+     const url = `${config.endpoints.listApprovalInfo}?level=${level}&aprLkrsId=${aprLkrsId}&aprId=${aprId}`;
+    const response = await apiService.getRequest(url);
+  return response;
+  } catch (error) {
+    console.error("Insert Approval Info Error:", error);
+    throw error;
+  }
+};
+
+
+//release Order API
+export const insertReleaseInfo = async (payload) => {
+  try {
+    const response = await apiService.postRequest(config.endpoints.insertReleaseInfo, payload);
+    return response;
+  } catch (error) {
+    console.error("Insert Approval Info Error:", error);
+    throw error;
+  }
+};
+
+//release Order List API
+export const listReleaseInfo = async ({ level, aprLkrsId, aprId }) => {
+  try {
+     const url = `${config.endpoints.listReleaseInfo}?level=${level}&aprLkrsId=${aprLkrsId}&aprId=${aprId}`;
+    const response = await apiService.getRequest(url);
+  return response;
+  } catch (error) {
+    console.error("Insert Approval Info Error:", error);
+    throw error;
   }
 };

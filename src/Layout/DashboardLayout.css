@@ -68,13 +68,17 @@
 }
 
   html {
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
     line-height: 1.15;
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
     -ms-overflow-style: scrollbar;
     -webkit-tap-highlight-color: transparent;
   }
+
+  .table, .table th, .table td, .table tfoot, .table thead {
+  font-family: Verdana, Geneva, sans-serif !important;
+}
   
   @-ms-viewport {
     width: device-width;
@@ -86,7 +90,7 @@
   
   body {
     margin: 0;
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
     font-size: 0.9375rem;
     font-weight: 400;
     line-height: 1.5;
@@ -216,7 +220,7 @@
   code,
   kbd,
   samp {
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
     font-size: 1em;
   }
   
@@ -276,7 +280,7 @@
   optgroup,
   textarea {
     margin: 0;
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
     font-size: inherit;
     line-height: inherit;
   }
@@ -387,7 +391,7 @@
   h1, h2, h3, h4, h5, h6,
   .h1, .h2, .h3, .h4, .h5, .h6 {
     margin-bottom: 0.66em;
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
     font-weight: 600;
     line-height: 1.1;
     color: inherit;
@@ -536,7 +540,7 @@
   kbd,
   pre,
   samp {
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
   }
   
   code {
@@ -4939,7 +4943,7 @@
     z-index: 1070;
     display: block;
     margin: 0;
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
     font-style: normal;
     font-weight: 400;
     line-height: 1.5;
@@ -5052,7 +5056,7 @@
     z-index: 1060;
     display: block;
     max-width: 276px;
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
     font-style: normal;
     font-weight: 400;
     line-height: 1.5;
@@ -12106,7 +12110,7 @@
   
   .close:before {
     content: '\ea00';
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
   }
   
   .badge {
@@ -12217,7 +12221,7 @@
   
   .table-header:after {
     content: '\f0dc';
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
     display: inline-block;
     margin-left: .5rem;
     font-size: .75rem;
@@ -14789,7 +14793,7 @@
   .selectize-input,
   .selectize-input input {
     color: #495057;
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
     font-size: 15px;
     line-height: 18px;
     -webkit-font-smoothing: inherit;
@@ -15031,7 +15035,7 @@
   }
   
   @font-face {
-    font-family: Georgia, serif;
+    font-family: Verdana, Geneva, sans-serif;
     /* src: url("../fonts/feather/feather-webfont.eot?t=1501841394106"); */
     /* IE9*/
     /* src: url("../fonts/feather/feather-webfont.eot?t=1501841394106#iefix") format("embedded-opentype"), url("../fonts/feather/feather-webfont.woff?t=1501841394106") format("woff"), url("../fonts/feather/feather-webfont.ttf?t=1501841394106") format("truetype"), url("../fonts/feather/feather-webfont.svg?t=1501841394106#feather") format("svg"); */
@@ -16366,3 +16370,44 @@
     display: none !important;
   }
 }
+
+
+.custom-rtc-table {
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 14px; /* Optional: adjust font size */
+}
+.rtc-summary-row {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    padding: 10px 0;
+}
+
+.custom-table-wrapper {
+  position: relative;
+}
+
+.table-footer-row {
+  display: flex;
+  font-weight: bold;
+  background-color: #f2f2f2;
+  border-top: 1px solid #ddd;
+}
+
+.footer-cell {
+  padding: 8px;
+  border-right: 1px solid #ddd;
+  text-align: left;
+  flex-grow: 1;
+}
+
+/* Adjust width ratios based on your column layout */
+.footer-cell.slno {
+  flex-basis: 80px;
+}
+.footer-cell.village {
+  flex-basis: 200px;
+}
+
+
+
+

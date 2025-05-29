@@ -49,10 +49,9 @@ import BBMP_TaxDetails from './Pages/BBMP/taxDetails';
 import BBMP_Homepage from './Pages/BBMP/homePage';
 import BBMP_LayoutForm from './Pages/BBMP/BBMP_Layout';
 import BBMP_Layout_Dashboard from './Pages/BBMP/BBMP_Layout_Dashboard';
-import ReleaseSiteSelection from './Pages/BBMP/ReleaseSiteSelection';
-import ReleaseSelection from './Pages/BBMP/sample';
-import EKYC_Preview from './Pages/BBMP/EKYC_Preview';
 
+import EKYC_Preview from './Pages/BBMP/EKYC_Preview';
+import ReleaseSelection from './Pages/BBMP/ReleaseSiteSelection';
 
 const AppRoutes = () => {
   return (
@@ -64,14 +63,13 @@ const AppRoutes = () => {
         <div className="App">
           {/* <Breadcrumbs /> */}
           <Routes>
-
-            <Route path="/" element={<BBMPLogin />} />
+<Route path="/" element={<BBMP_LayoutForm/>}/>
+            <Route path="/Login" element={<BBMPLogin />} />
             <Route path="/tax_Details" element={<BBMP_TaxDetails />} />
             <Route path="/homePage" element={<BBMP_Homepage />} />
             <Route path="/LayoutForm" element={<BBMP_LayoutForm/>}/>
             <Route path="/login" element={<Login />} />
             <Route path="/LayoutDashboard" element={<BBMP_Layout_Dashboard/>}/>
-            <Route path="/Sites" element = {<ReleaseSiteSelection />}/>
             <Route path="/Release" element = {<ReleaseSelection />}/>
             <Route path='/Preview' element = {<EKYC_Preview/>}/>
 

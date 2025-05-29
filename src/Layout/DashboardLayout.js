@@ -11,6 +11,7 @@ import i18n from "../localization/i18n";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
 import BBMP_LayoutForm from '../Pages/BBMP/BBMP_Layout';
+import { toast, Toaster } from 'react-hot-toast';
 
 const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
@@ -144,7 +145,7 @@ const DashboardLayout = ({ children }) => {
   
   return (
     <div className="App">
-
+  <Toaster toastOptions={{duration: 4000, style: {fontSize: '14px', padding: '16px 24px', minWidth: '300px',textAlign: 'center', }, }} position="bottom-right"/>
       <div className="page">
         <div className="page-main">
 

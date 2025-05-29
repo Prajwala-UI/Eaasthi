@@ -13,7 +13,20 @@ const config = {
 
     endpoints: {
         sendOTP: '/fnSendOtp',
-        verifyOTP: '/fnValidateOtp'
+        verifyOTP: '/fnValidateOtp',
+        epid: '/api/eaasthi/FnGetOwnerKhataDetails',
+        send_OTP: '/api/otp/fnSendOtp',
+        verify_OTP: '/api/otp/fnValidateOtp',
+        kaveriDistrict: '/api/Bhoomi/GetDistrictName',
+        kaveriTaluk: '/api/Bhoomi/GetTalukName',
+        kaveriHobli: '/api/Bhoomi/GetHobliName',
+        kaveriVillage: '/api/Bhoomi/GetVillageName',
+        kaveriHissa: '/api/Bhoomi/GetHissaList',
+        kaveriFetchDetails: '/api/Bhoomi/GetRTCDetailsWithBhoomiVillage',
+        insertApprovalInfo: '/api/Approval/fnInsertApprovalinfo',
+        listApprovalInfo: '/api/Approval/fnGetApprovalList',
+        insertReleaseInfo: '/api/Release/fnInsertReleaseinfo',
+        listReleaseInfo: '/api/Release/fnGetReleaseList',
     }
 };
 

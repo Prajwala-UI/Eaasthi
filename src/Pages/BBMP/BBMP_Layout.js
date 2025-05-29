@@ -12,16 +12,18 @@ import axios from 'axios';
 import { useTable, usePagination } from "react-table";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-
+import { toast, Toaster } from 'react-hot-toast';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 import apiService from '../../API/apiService';
 import {
     handleFetchDistricts, handleFetchTalukOptions, handleFetchHobliOptions, handleFetchVillageOptions,
-    handleFetchHissaOptions, fetchRTCDetailsAPI, handleFetchEPIDDetails
+    handleFetchHissaOptions, fetchRTCDetailsAPI, handleFetchEPIDDetails, getAccessToken, sendOtpAPI, verifyOtpAPI, submitEPIDDetails, submitsurveyNoDetails,
+    insertApprovalInfo, listApprovalInfo, insertReleaseInfo, listReleaseInfo,
 } from '../../API/authService';
 
+import bbmplogo from '../../assets/bbmp.png';
 
 export const useLoader = () => {
     const [loading, setLoading] = useState(false);
@@ -60,35 +62,31 @@ const BBMP_LayoutForm = () => {
 
     }, [newLanguage]);
 
+    const CreatedBy = 1;
+    const CreatedName = "username";
+    const RoleID = "user";
+
     useEffect(() => {
-        getToken();
+        generate_Token();
+
+        sessionStorage.setItem('createdBy', CreatedBy.toString());
+        sessionStorage.setItem('createdName', CreatedName);
+        sessionStorage.setItem('RoleID', RoleID);
+
     }, []);
-    const getToken = async () => {
-        start_loader();
-        const formData = new FormData();
-        formData.append("username", "layoutKhata");
-        formData.append("password", "layoutKhata@123");
 
+    const generate_Token = async () => {
         try {
-            const response = await fetch('https://localhost:7049/Token', {
-                method: 'POST',
-                headers: {
-                    'Accept': '*/*'
-                },
-                body: formData
-            });
-
-            const data = await response.json(); // assuming it's JSON
-            sessionStorage.setItem('accessToken', data.access_token); // adjust according to response shape
-
+            const response = await getAccessToken();
+            sessionStorage.setItem('access_token', response.access_token);
         } catch (err) {
-            console.error("Token fetch error", err);
+            console.error("Error fetching districts", err);
+        } finally {
 
-        }
-        finally {
-            stop_loader();
         }
     };
+
+
     const [selectedLandType, setSelectedLandType] = useState("convertedRevenue");
 
     const [rtc_AddedData, setRtc_AddedData] = useState([]);
@@ -119,30 +117,33 @@ const BBMP_LayoutForm = () => {
                                         {/* First Radio Button */}
                                         <div className="col-12 col-sm-12 col-md-6 col-lg-6 col-xl-6" >
                                             <div className="form-check">
-                                                <input
-                                                    className="form-check-input radioStyle"
-                                                    type="radio"
-                                                    name="landType"
-                                                    value="convertedRevenue"
-                                                    onChange={() => setSelectedLandType("convertedRevenue")}
-                                                    checked={selectedLandType === "convertedRevenue"}
-                                                />
-                                                <label>Converted Revenue Survey No (No BBMP Khata)</label>
+                                                <label className="form-check-label">
+                                                    <input
+                                                        className="form-check-input radioStyle"
+                                                        type="radio"
+                                                        name="landType"
+                                                        value="convertedRevenue"
+                                                        onChange={() => setSelectedLandType("convertedRevenue")}
+                                                        checked={selectedLandType === "convertedRevenue"}
+                                                    />
+                                                    Converted Revenue Survey No (No BBMP Khata)
+                                                </label>
                                             </div>
                                         </div>
 
                                         {/* Second Radio Button */}
                                         <div className="col-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
                                             <div className="form-check">
-                                                <input
-                                                    className="form-check-input radioStyle"
-                                                    type="radio"
-                                                    name="landType"
-                                                    value="bbmpKhata"
-                                                    onChange={() => setSelectedLandType("bbmpKhata")}
-                                                    checked={selectedLandType === "bbmpKhata"}
-                                                />
-                                                <label>BBMP A-Khata</label>
+                                                <label className="form-check-label">
+                                                    <input
+                                                        className="form-check-input radioStyle"
+                                                        type="radio"
+                                                        name="landType"
+                                                        value="bbmpKhata"
+                                                        onChange={() => setSelectedLandType("bbmpKhata")}
+                                                        checked={selectedLandType === "bbmpKhata"}
+                                                    />
+                                                    BBMP A-Khata</label>
                                             </div>
                                         </div>
 
@@ -216,6 +217,21 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
         }
     }, [selectedDistrict, Language]);
 
+    const [createdBy, setCreatedBy] = useState(null);
+    const [createdName, setCreatedName] = useState('');
+    const [roleID, setRoleID] = useState('');
+
+    useEffect(() => {
+        const storedCreatedBy = sessionStorage.getItem('createdBy');
+        const storedCreatedName = sessionStorage.getItem('createdName');
+        const storedRoleID = sessionStorage.getItem('RoleID');
+
+        setCreatedBy(storedCreatedBy);
+        setCreatedName(storedCreatedName);
+        setRoleID(storedRoleID);
+
+
+    }, []);
 
     const [isDistrictReadonly, setIsDistrictReadonly] = useState(false);
 
@@ -233,7 +249,6 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
         } finally {
         }
     };
-
     const fetchTaluks = async (districtCode, Language) => {
         console.log("Fetching taluks for district:", districtCode);
 
@@ -246,7 +261,6 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
         } finally {
         }
     };
-
     const fetchHoblis = async (districtCode, talukCode, Language) => {
         console.log("Fetching Hobli for district:", districtCode, talukCode, language);
 
@@ -261,7 +275,6 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
 
         }
     };
-
     const fetchVillages = async (districtCode, talukCode, hobliCode, Language) => {
         console.log("Fetching Hobli for district:", districtCode, talukCode, hobliCode, language);
 
@@ -274,15 +287,11 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
         } finally {
         }
     };
-
-
     const [data, setData] = useState([]);
     const [error, setError] = useState(null);
     const [showTable, setShowTable] = useState(false);
-
     const [rtcAddedData, setRtcAddedData] = useState([]);
     const [rtcData, setRtcData] = useState([]);
-
     const handleDistrictChange = (e) => {
         const districtCode = e.target.value;
         console.log('Selected District:', districtCode); // Debug
@@ -317,11 +326,6 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
         fetchHoblis(selectedDistrict, talukCode, Language);
     };
     const handleHobliChange = (e) => {
-        // const hobliCode = e.target.value;
-        // setSelectedHobli(hobliCode);
-        // setSelectedVillage("");
-        // setVillages([]);
-        // fetchVillages(selectedDistrict, selectedTaluk, hobliCode, Language);
 
         const hobliCode = e.target.value;
         setSelectedHobli(hobliCode);
@@ -341,9 +345,6 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
         fetchVillages(selectedDistrict, selectedTaluk, hobliCode, Language);
     };
     const handleVillageChange = (e) => {
-        // const value = e.target.value;
-        // setSelectedVillage(value);
-        // setSurveyNumber('');
 
         const value = e.target.value;
         setSelectedVillage(value);
@@ -362,16 +363,6 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
         if (/^[0-9-/]*$/.test(value)) {  // Only numbers, hyphen, slash
             setSurveyNumber(value);
         }
-    };
-    const addToTable = () => {
-        const newRow = {
-            district: selectedDistrict,
-            taluk: selectedTaluk,
-            hobli: selectedHobli,
-            village: selectedVillage,
-        };
-
-        setRtcData([...rtcData, newRow]);
     };
     const [surnocEnabled, setSurnocEnabled] = useState(false);
     const [hissaEnabled, setHissaEnabled] = useState(false);
@@ -451,6 +442,7 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
 
     };
     //final RTC details table
+    const tableRTCRef = useRef(null);
     const handleViewRTC = (item) => {
         const exists = rtcAddedData.some(
             (data) =>
@@ -464,60 +456,178 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
         if (exists) {
             Swal.fire("Duplicate!", "This record already exists in the table.", "warning");
         } else {
-            const districtName = districts.find(
+            const selectedDistrictObj = districts.find(
                 d => String(d.districT_CODE) === String(selectedDistrict)
-            )?.displayName || '';
+            ) || {};
 
-            const talukName = taluks.find(
+            const districtName = selectedDistrictObj.districT_NAME || '';
+            const districtCode = selectedDistrictObj.districT_CODE || '';
+
+            const selectedTalukObj = taluks.find(
                 t => String(t.talukA_CODE) === String(selectedTaluk)
-            )?.displayName || '';
+            ) || {};
 
-            const hobliName = hoblis.find(
+            const talukName = selectedTalukObj.displayName || '';
+            const talukCode = selectedTalukObj.talukA_CODE || '';
+
+            const selectedHobliObj = hoblis.find(
                 h => String(h.hoblI_CODE) === String(selectedHobli)
-            )?.displayName || '';
+            ) || {};
 
-            const villageName = villages.find(
+            const hobliName = selectedHobliObj.displayName || '';
+            const hobliCode = selectedHobliObj.hoblI_CODE || '';
+
+            const selectedVillageObj = villages.find(
                 v => String(v.villagE_CODE) === String(selectedVillage)
-            )?.displayName || '';
+            ) || {};
+
+            const villageName = selectedVillageObj.displayName || '';
+            const villageCode = selectedVillageObj.villagE_CODE || '';
 
             const itemWithLocation = {
                 ...item,
                 district: districtName,
+                districtCode: districtCode,
                 taluk: talukName,
+                talukCode: talukCode,
                 hobli: hobliName,
-                village: villageName
+                hobliCode: hobliCode,
+                village: villageName,
+                villageCode: villageCode
             };
 
-            setRtcAddedData((prev) => {
-                const updated = [...prev, itemWithLocation];
-                console.log("Updated RTC Data: ", updated);
-                return updated;
-            });
+            setRtcAddedData((prev) => [...prev, itemWithLocation]);
+
+            // ✅ Show success toast
+            toast.success("Record Added!");
+
+
+            // ✅ Scroll to the added table
+            setTimeout(() => {
+               tableRTCRef.current?.scrollIntoView({
+  behavior: 'smooth',
+  block: 'nearest',
+});
+
+            }, 300);
         }
     };
 
-    //List of save RTC button function
-    const handleSaveRTC = () => {
+
+    //First block save API
+    const handleSaveRTC = async () => {
         if (rtcAddedData.length === 0) {
             Swal.fire("No Data", "Please add at least one record before saving.", "warning");
             return;
         }
 
         console.log("RTC Data to be saved:", rtcAddedData);
-        setRtc_AddedData([...rtc_AddedData, rtcAddedData]);
-        Swal.fire("Success", "RTC data printed in console.", "success");
+        rtcAddedData.forEach(item => {
+            console.log(item.district);
+            console.log(item.districtCode);
+
+        });
+
+        // Correct state update to flatten array items
+        setRtc_AddedData([...rtc_AddedData, ...rtcAddedData]);
+
+        const payload = {
+            lkrS_ID: 0,
+            lkrS_LANDTYPE: "SurveyNo",
+            lkrS_EPID: "9999999999",
+            lkrS_SITEAREA_SQFT: 0,
+            lkrS_SITEAREA_SQMT: 0,
+            lkrS_REMARKS: "string",
+            lkrS_ADDITIONALINFO: "string",
+            lkrS_CREATEDBY: createdBy,
+            lkrS_CREATEDNAME: createdName,
+            lkrS_CREATEDROLE: roleID,
+            khatA_DETAILS: null,
+            khatA_OWNER_DETAILS: null,
+            surveY_NUMBER_DETAILS: rtcAddedData.map(item => ({
+                suR_ID: 0,
+                suR_LKRS_ID: 0,
+                suR_DISTRICT: item.districtCode,
+                suR_TALUK: item.talukCode,
+                suR_HOBLI: item.hobliCode,
+                suR_VILLAGE: parseInt(item.villageCode),
+                suR_SURVEYNO: item.survey_no,
+                suR_SURNOC: item.surnoc,
+                suR_HISSA: item.hissa_no,
+                suR_LANDCODE: item.land_code,
+                mainownerno: item.main_owner_no,
+                ownerno: item.owner_no,
+                suR_OWNERNAME: item.owner,
+                suR_EXTACRE: item.ext_acre,
+                suR_EXTGUNTA: item.ext_gunta,
+                suR_EXTINSQFT: item.ext_in_sqft,
+                suR_EXTINSQMT: item.ext_in_sqmt,
+                suR_ISAADHAARSEEDED: 0,
+                suR_REMARKS: "Remarks",
+                suR_ADDITIONALINFO: "AdditionalInformation",
+                suR_CREATEDBY: createdBy,
+                suR_CREATEDNAME: createdName,
+                suR_CREATEDROLE: roleID
+            }))
+        };
+
+        console.log(payload);
+
+        try {
+            const response = await submitsurveyNoDetails(payload);
+
+            if (response.responseStatus === true) {
+                sessionStorage.setItem('LKRSID', response.lkrsid);
+                Swal.fire({
+                    title: response.responseMessage,
+                    text: response.display_LKRSID,
+                    icon: "success",
+                    confirmButtonText: "OK",
+                });
+            } else {
+                Swal.fire({
+                    text: response.responseMessage || "Failed to save data",
+                    icon: "error",
+                    confirmButtonText: "OK",
+                });
+            }
+        } catch (error) {
+            console.error("Failed to insert data:", error);
+            Swal.fire({
+                text: "Something went wrong. Please try again later.",
+                icon: "error",
+                confirmButtonText: "OK",
+            });
+        }
     };
+
     const handleAddRTCRow = (apiDataRow) => {
-        const districtName = districts.find(item => item.districT_CODE === selectedDistrict)?.displayName || '';
-        const talukName = taluks.find(item => item.talukA_CODE === selectedTaluk)?.displayName || '';
-        const hobliName = hoblis.find(item => item.hoblI_CODE === selectedHobli)?.displayName || '';
-        const villageName = villages.find(item => item.villagE_CODE === selectedVillage)?.displayName || '';
+        const selectedDistrictObj = districts.find(item => item.districT_CODE === selectedDistrict) || {};
+        const districtName = selectedDistrictObj.districT_NAME || '';
+        const districtCode = selectedDistrictObj.districT_CODE || 0;
+
+        const selectedTalukObj = taluks.find(item => item.talukA_CODE === selectedTaluk) || {};
+        const talukName = selectedTalukObj.talukA_NAME || '';
+        const talukCode = selectedTalukObj.talukA_CODE || 0;
+
+        const selectedHobliObj = hoblis.find(item => item.hoblI_CODE === selectedHobli) || {};
+        const hobliName = selectedHobliObj.hoblI_NAME || '';
+        const hobliCode = selectedHobliObj.hoblI_CODE || 0;
+
+        const selectedVillageObj = villages.find(item => item.villagE_CODE === selectedVillage) || {};
+        const villageName = selectedVillageObj.villagE_NAME || '';
+        const villageCode = selectedVillageObj.villagE_CODE || 0;
+
         const newRow = {
             ...apiDataRow,
             district: districtName,
+            districtcode: districtCode,
             taluk: talukName,
+            talukCode: talukCode,
             hobli: hobliName,
+            hobliCode: hobliCode,
             village: villageName,
+            villageCode: villageCode
         };
         setRtcData((prevData) => [...prevData, newRow]);
     };
@@ -592,6 +702,36 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
             grow: 2,
             minWidth: '200px',
         },
+        {
+            name: 'SqFt',
+            selector: row => {
+                const acres = parseFloat(row.ext_acre) || 0;
+                const gunta = parseFloat(row.ext_gunta) || 0;
+                const fg = parseFloat(row.ext_fgunta) || 0;
+                const sqft = (acres * 43560) + (gunta * 1089) + (fg * 68.0625);
+                return sqft.toFixed(2);
+            },
+            sortable: true,
+            wrap: true,
+            grow: 2,
+            minWidth: '200px',
+        },
+        {
+            name: 'SqM',
+            selector: row => {
+                const acres = parseFloat(row.ext_acre) || 0;
+                const gunta = parseFloat(row.ext_gunta) || 0;
+                const fg = parseFloat(row.ext_fgunta) || 0;
+                const sqft = (acres * 43560) + (gunta * 1089) + (fg * 68.0625);
+                const sqm = sqft * 0.092903;
+                return sqm.toFixed(2); // rounding to 2 decimal places
+            },
+            sortable: true,
+            wrap: true,
+            grow: 2,
+            minWidth: '200px',
+        },
+
     ];
 
 
@@ -608,6 +748,56 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
             text: 'This feature is under development!',
             confirmButtonText: 'OK'
         });
+    };
+
+    const combinedData = [...rtcAddedData, ...rtcData];
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
+
+
+    let totalAcre = 0;
+    let totalGunta = 0;
+    let totalFGunta = 0;
+    let totalSqFt = 0;
+    let totalSqM = 0;
+
+    combinedData.forEach(row => {
+        const acre = parseFloat(row.ext_acre || 0);
+        const gunta = parseFloat(row.ext_gunta || 0);
+        const fgunta = parseFloat(row.ext_fgunta || 0);
+
+        totalAcre += acre;
+        totalGunta += gunta;
+        totalFGunta += fgunta;
+
+        const sqft = (acre * 43560) + (gunta * 1089) + (fgunta * 68.0625);
+        totalSqFt += sqft;
+        totalSqM += sqft * 0.092903;
+    });
+
+    // Normalize fgunta -> gunta and acre
+    totalGunta += Math.floor(totalFGunta / 16);
+    totalFGunta = totalFGunta % 16;
+
+    totalAcre += Math.floor(totalGunta / 40);
+    totalGunta = totalGunta % 40;
+
+    const totalPages = Math.ceil(combinedData.length / rowsPerPage);
+
+    const paginatedData = combinedData.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
+
+    const goToPage = (page) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+
+    const handlePageSizeChange = (e) => {
+        setRowsPerPage(Number(e.target.value));
+        setCurrentPage(1); // Reset to first page when page size changes
     };
 
     return (
@@ -693,18 +883,6 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
                 {/* Surnoc */}
                 <div className="col-12 col-sm-12 col-md-6 col-lg-3 col-xl-3 mb-3">
                     <label className="form-label">Surnoc</label>
-
-                    {/* <select
-                        className="form-select"
-                        value={selectedSurnoc}                // <-- your state
-                        onChange={(e) => setSelectedSurnoc(e.target.value)}  // <-- update state
-                    ><option value="" disabled>Select Surnoc</option>
-                        {surnocOptions.length > 0
-                            ? surnocOptions.map((option, index) => (
-                                <option key={index} value={option}>{option}</option>
-                            ))
-                            : <option disabled>{t('translation.dropdownValues.surnoc')}</option>}
-                    </select> */}
                     <select
                         className="form-select"
                         value={selectedSurnoc}
@@ -727,17 +905,6 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
                 {/* Hissa No */}
                 <div className="col-12 col-sm-12 col-md-6 col-lg-3 col-xl-3 mb-3">
                     <label className="form-label">Hissa No</label>
-                    {/* <select
-                        className="form-select"
-                        value={selectedHissaNo}
-                        onChange={(e) => setSelectedHissaNo(e.target.value)}
-                    ><option value="" disabled>Select Hissa No</option>
-                        {hissaOptions.length > 0
-                            ? hissaOptions.map((option, index) => (
-                                <option key={index} value={option}>{option}</option>
-                            ))
-                            : <option disabled>{t('translation.dropdownValues.hissaNo')}</option>}
-                    </select> */}
                     <select
                         className="form-select"
                         value={selectedHissaNo}
@@ -809,25 +976,129 @@ const NoBBMPKhata = ({ Language, rtc_AddedData, setRtc_AddedData }) => {
                     </div>
                 )}
 
-
                 <hr />
                 {/* Added RTC Table */}
-                {rtcAddedData.length > 0 && (
-                    <div className="col-12 col-sm-12 col-md-12 col-lg-12 col-xl-12 mt-4">
-                        <h4>Added RTC Details</h4>
-                        <DataTable
-                            columns={rtc_columns}
-                            data={[...rtcAddedData, ...rtcData]}  // Merge rtcAddedData and rtcData
-                            pagination
-                            highlightOnHover
-                            striped
-                            responsive
-                        />
-                        <div className="row">
-                            <div className="col-12 col-sm-12 col-md-10 col-lg-10 col-xl-10 mb-3" />
-                            <div className="col-12 col-sm-12 col-md-2 col-lg-2 col-xl-2  mb-3">
-                                <label>&nbsp;</label>
-                                <button className='btn btn-primary btn-block' onClick={handleSaveRTC}>Save</button>
+                {combinedData.length > 0 && (
+                    <div className="col-12 mt-4" ref={tableRTCRef}>
+                        <div className="card shadow-sm p-3 rounded">
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <h5 className="text-primary m-0">📄 Added RTC Details</h5>
+                                <div className="d-flex align-items-center">
+                                    <label className="me-2 mb-0">Rows per page:</label>
+                                    <select
+                                        className="form-select form-select-sm w-auto"
+                                        value={rowsPerPage}
+                                        onChange={handlePageSizeChange}
+                                    >
+                                        {[5, 10, 15, 20, 25, 30].map((size) => (
+                                            <option key={size} value={size}>{size}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="table-responsive custom-scroll-table">
+                                <table className="table table-striped table-hover table-bordered rounded-table">
+                                    <thead className="table-primary sticky-header">
+                                        <tr>
+                                            <th>Action</th>
+                                            <th>S.No</th>
+                                            <th>District</th>
+                                            <th>Taluk</th>
+                                            <th>Hobli</th>
+                                            <th>Village</th>
+                                            <th>Owner Name</th>
+                                            <th>Survey No / Surnoc / Hissa No</th>
+                                            <th>Extent (Acre.Gunta.Fgunta)</th>
+                                            <th>SqFt</th>
+                                            <th>SqM</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {paginatedData.map((row, index) => (
+                                            <tr key={index}>
+                                                <td>
+                                                    <button className="btn btn-sm btn-outline-danger" onClick={() => handleRemoveRTC(index + (currentPage - 1) * rowsPerPage)}>
+                                                        <i className="fa fa-trash" />
+                                                    </button>
+                                                </td>
+                                                <td>{index + 1 + (currentPage - 1) * rowsPerPage}</td>
+                                                <td>{row.district}</td>
+                                                <td>{row.taluk}</td>
+                                                <td>{row.hobli}</td>
+                                                <td>{row.village}</td>
+                                                <td>{row.owner}</td>
+                                                <td>{`${row.survey_no}/${row.surnoc}/${row.hissa_no}`}</td>
+                                                <td>{`${row.ext_acre}.${row.ext_gunta}.${row.ext_fgunta}`}</td>
+                                                <td>
+                                                    {(
+                                                        (parseFloat(row.ext_acre) * 43560) +
+                                                        (parseFloat(row.ext_gunta) * 1089) +
+                                                        (parseFloat(row.ext_fgunta) * 68.0625)
+                                                    ).toFixed(2)}
+                                                </td>
+                                                <td>
+                                                    {(
+                                                        (
+                                                            (parseFloat(row.ext_acre) * 43560) +
+                                                            (parseFloat(row.ext_gunta) * 1089) +
+                                                            (parseFloat(row.ext_fgunta) * 68.0625)
+                                                        ) * 0.092903
+                                                    ).toFixed(2)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot >
+                                        <tr>
+                                            <th colSpan={6}></th>
+                                            <th colSpan={2} className="text-end fw-bold">Total Area:</th>
+                                            <th className="text-left fw-bold" >{`${totalAcre}.${totalGunta}.${totalFGunta}`}</th>
+                                            <th className='fw-bold'>{totalSqFt.toFixed(2)}</th>
+                                            <th className='fw-bold'>{totalSqM.toFixed(2)}</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            {/* Pagination Summary and Controls */}
+                            <div className="d-flex justify-content-between align-items-center mt-3 flex-wrap">
+                                <div>
+                                    Showing {Math.min((currentPage - 1) * rowsPerPage + 1, combinedData.length)}–{Math.min(currentPage * rowsPerPage, combinedData.length)} of {combinedData.length} records
+                                </div>
+
+                                <div>
+                                    <button
+                                        className="btn btn-outline-secondary btn-sm mx-1"
+                                        onClick={() => goToPage(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                    >
+                                        Previous
+                                    </button>
+                                    {[...Array(totalPages).keys()].map((num) => (
+                                        <button
+                                            key={num}
+                                            className={`btn btn-sm mx-1 ${currentPage === num + 1 ? 'btn-primary' : 'btn-outline-primary'}`}
+                                            onClick={() => goToPage(num + 1)}
+                                        >
+                                            {num + 1}
+                                        </button>
+                                    ))}
+                                    <button
+                                        className="btn btn-outline-secondary btn-sm mx-1"
+                                        onClick={() => goToPage(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="row mt-4">
+                                <div className="col-md-10" />
+                                <div className="col-md-2">
+                                    <button className="btn btn-primary w-100" onClick={handleSaveRTC}>Save</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -858,6 +1129,12 @@ const BBMPKhata = () => {
     const [timer, setTimer] = useState(120);
     const [resendEnabled, setResendEnabled] = useState(false);
 
+    const [otpInputs, setOtpInputs] = useState({});
+    const [verifiedNumbers, setVerifiedNumbers] = React.useState({});
+
+    const fetchedEPIDData = Array.isArray(epid_fetchedData)
+        ? epid_fetchedData
+        : [epid_fetchedData];
 
     useEffect(() => {
         let interval = null;
@@ -887,8 +1164,13 @@ const BBMPKhata = () => {
         }
     };
 
-    const handleSendOtp = (index, row) => {
-        const phoneNumber = phoneNumbers[index] ?? row.MobileNumber;
+    const handleSendOtp = async (index, row) => {
+        const phoneNumber =
+            phoneNumbers[index] ??
+            row.MobileNumber ??
+            epid_fetchedData?.OwnerDetails?.[0]?.mobileNumber ??
+            "";
+
         const phoneRegex = /^[1-9][0-9]{9}$/;
 
         if (!phoneRegex.test(phoneNumber)) {
@@ -900,22 +1182,162 @@ const BBMPKhata = () => {
             return;
         }
 
-        setPhoneErrors({ ...phoneErrors, [index]: "" });
-        setOtpSentIndex(index);
-        setOtpSent(true);
+
+
+        const phoneNo = "9999999999";
+        // ✅ Call the API with the phone number
+        try {
+            const response = await sendOtpAPI(phoneNo);
+
+            if (response.responseStatus === true) {
+                Swal.fire({
+                    text: response.responseMessage,
+                    icon: "success",
+                    timer: 2000,
+                    confirmButtonText: "OK",
+                })
+                setPhoneErrors({ ...phoneErrors, [index]: "" });
+                setOtpSentIndex(index);
+                setOtpSent(true);
+                setTimer(30);
+                setResendEnabled(false);
+
+            } else {
+
+            }
+
+        } catch (error) {
+            console.error("Failed to send OTP:", error);
+            // Optional: Handle error in UI
+        }
+    };
+    const handleOtpChange = (e, index) => {
+        setOtpInputs({ ...otpInputs, [index]: e.target.value });
+    };
+    const handleVerifyOtp = async (index, row) => {
+        const mobileNumber =
+            phoneNumbers[index] ??
+            row.MobileNumber ??
+            epid_fetchedData?.OwnerDetails?.[0]?.mobileNumber ??
+            "";
+
+        const otp = otpInputs[index];
+
+        if (!otp || otp.length !== 6) {
+            setPhoneErrors((prev) => ({ ...prev, [index]: "Enter a valid 6-digit OTP" }));
+            return;
+        }
+
+        // Use real mobileNumber and otp here, currently hardcoded for demo
+        const phoneno = "9999999999";
+        const otp1 = "999999";
+
+        try {
+            const response = await verifyOtpAPI(phoneno, otp);
+            console.log(response);
+
+            if (response.responseStatus === true) {
+                setVerifiedNumbers((prev) => ({ ...prev, [index]: true }));
+                toast.success("OTP verified successfully!")
+                setPhoneErrors((prev) => ({ ...prev, [index]: "" }));
+                setOtpSentIndex(null);
+                setTimer(0);
+            } else {
+                setPhoneErrors((prev) => ({
+                    ...prev,
+                    [index]: response.responseMessage || "OTP verification failed",
+                }));
+            }
+        } catch (error) {
+            console.error("Failed to verify OTP:", error);
+            setPhoneErrors((prev) => ({ ...prev, [index]: "Error verifying OTP" }));
+        }
+    };
+
+    useEffect(() => {
+        if (epid_fetchedData?.OwnerDetails?.[0]?.mobileNumber) {
+            setPhoneNumbers((prev = []) => {
+                const updated = Array.isArray(prev) ? [...prev] : [];
+                updated[0] = epid_fetchedData.OwnerDetails[0].mobileNumber;
+                return updated;
+            });
+        }
+
+
+    }, [epid_fetchedData]);
+
+    const [createdBy, setCreatedBy] = useState(null);
+    const [createdName, setCreatedName] = useState('');
+    const [roleID, setRoleID] = useState('');
+
+    useEffect(() => {
+        const storedCreatedBy = sessionStorage.getItem('createdBy');
+        const storedCreatedName = sessionStorage.getItem('createdName');
+        const storedRoleID = sessionStorage.getItem('RoleID');
+
+        setCreatedBy(storedCreatedBy);
+        setCreatedName(storedCreatedName);
+        setRoleID(storedRoleID);
+    }, []);
+
+    const handleResendOtp = async (index, row) => {
+        // Reset OTP input & timer as before
+        setOtp("");
         setTimer(30);
         setResendEnabled(false);
 
-        // call API to send OTP here
+        // Determine the phone number to resend OTP to (same logic as handleSendOtp)
+        const phoneNumber =
+            phoneNumbers[index] ??
+            row.MobileNumber ??
+            epid_fetchedData?.OwnerDetails?.[0]?.mobileNumber ??
+            "";
+
+        const phoneRegex = /^[1-9][0-9]{9}$/;
+
+        if (!phoneRegex.test(phoneNumber)) {
+            const updatedErrors = {
+                ...phoneErrors,
+                [index]: "Please enter a valid 10-digit phone number that does not start with zero",
+            };
+            setPhoneErrors(updatedErrors);
+            return;
+        }
+        const phoneNo = "9999999999";
+        try {
+            // Call the resend OTP API here (you can use the same sendOtpAPI if it supports resending)
+            const response = await sendOtpAPI(phoneNo);
+
+            if (response.responseStatus === true) {
+                Swal.fire({
+                    text: "OTP resent successfully!",
+                    icon: "success",
+                    timer: 2000,
+                    confirmButtonText: "OK",
+                });
+                setPhoneErrors({ ...phoneErrors, [index]: "" });
+                setOtpSentIndex(index);
+                setOtpSent(true);
+            } else {
+                // Handle failure case (optional)
+                Swal.fire({
+                    text: response.responseMessage || "Failed to resend OTP",
+                    icon: "error",
+                    confirmButtonText: "OK",
+                });
+            }
+        } catch (error) {
+            console.error("Failed to resend OTP:", error);
+            Swal.fire({
+                text: "Error resending OTP. Please try again later.",
+                icon: "error",
+                confirmButtonText: "OK",
+            });
+        }
     };
 
+    const [ownerTableData, setOwnerTableData] = useState([]);
 
-
-    const handleResendOtp = () => {
-        setOtp("");
-        setTimer(30); // This will trigger button enable
-        setResendEnabled(false);
-    };
     const handleFetchDetails = async () => {
         start_loader();
 
@@ -931,75 +1353,83 @@ const BBMPKhata = () => {
             Swal.fire("Error", "Please enter a valid 10-digit EPID Number that does not start with 0!", "error");
             return;
         }
+
         try {
-            // Fetch the full property details
+            sessionStorage.setItem('isTokenRequired', false);
             const fetchedData = await handleFetchEPIDDetails(epidNumber);
-
-            // Log the fetched data to check its structure
             console.log("Fetched Data:", fetchedData);
-
-            // Check if fetchedData is valid
+            sessionStorage.setItem("epid_JSON", JSON.stringify(fetchedData));
             if (fetchedData) {
-                // Destructure the data into variables for easy access
                 const {
-                    PropertyID,
-                    PropertyCategory,
-                    PropertyClassification,
-                    WardNumber,
-                    WardName,
-                    StreetName,
-                    Streetcode,
-                    SASApplicationNumber,
-                    IsMuation,
-                    KaveriRegistrationNumber,
-                    AssessmentNumber,
+                    propertyID,
+                    propertyCategory,
+                    propertyClassification,
+                    wardNumber,
+                    wardName,
+                    streetName,
+                    streetcode,
+                    sasApplicationNumber,
+                    isMuation,
+                    kaveriRegistrationNumber,
+                    assessmentNumber,
                     courtStay,
                     enquiryDispute,
-                    CheckBandi,
-                    SiteDetails,
-                    OwnerDetails,
+                    checkBandi,
+                    siteDetails,
+                    ownerDetails,
                 } = fetchedData;
 
-                // Log the destructured details to see them
-                console.log("Property ID:", PropertyID);
-                console.log("Property Category:", PropertyCategory);
-                console.log("Owner Details:", OwnerDetails.IdType);
-                console.log("Site Details:", SiteDetails);
-                console.log("Check Bandi:", CheckBandi);
-
-                // You can display data conditionally or save it to the state
+                // ✅ Safely access and log the first owner's name
+                if (Array.isArray(ownerDetails) && ownerDetails.length > 0) {
+                    console.log("Owner Name:", ownerDetails[0].ownerName);
+                } else {
+                    console.warn("Owner details array is empty or invalid");
+                }
+                setOwnerTableData([]); // clear table data first
                 setEPID_FetchedData({
-                    PropertyID,
-                    PropertyCategory,
-                    PropertyClassification,
-                    WardNumber,
-                    WardName,
-                    StreetName,
-                    Streetcode,
-                    SASApplicationNumber,
-                    IsMuation,
-                    KaveriRegistrationNumber,
-                    AssessmentNumber,
+                    PropertyID: propertyID,
+                    PropertyCategory: propertyCategory,
+                    PropertyClassification: propertyClassification,
+                    WardNumber: wardNumber,
+                    WardName: wardName,
+                    StreetName: streetName,
+                    Streetcode: streetcode,
+                    SASApplicationNumber: sasApplicationNumber,
+                    IsMuation: isMuation,
+                    KaveriRegistrationNumber: kaveriRegistrationNumber,
+                    AssessmentNumber: assessmentNumber,
                     courtStay,
                     enquiryDispute,
-                    CheckBandi,
-                    SiteDetails,
-                    OwnerDetails,
+                    CheckBandi: checkBandi,
+                    SiteDetails: siteDetails,
+                    OwnerDetails: ownerDetails,
                 });
 
-                // Success alert
+                setOwnerTableData(ownerDetails);
                 Swal.fire({
                     title: "Success",
                     text: "EPID Details fetched successfully!",
                     icon: "success",
                     confirmButtonText: "OK",
                 }).then(() => {
-                    setEpidNumber(""); // Clear epidNumber
-                    setEPIDShowTable(true); // Show the table
+                    setEpidNumber("");
+                    setEPIDShowTable(true);
                 });
             } else {
-                console.error("No valid data found");
-
+                Swal.fire({
+                    title: "Error",
+                    text: "EPID is invalid. Please provide a correct EPID",
+                    icon: "error",
+                    confirmButtonText: "OK",
+                    allowOutsideClick: false,    // Prevent clicking outside to close
+                    allowEscapeKey: false,       // Prevent pressing ESC to close
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // User clicked OK
+                        setEpidNumber("");
+                        setEPIDShowTable(false);
+                    }
+                });
             }
         } catch (error) {
             console.error("Error fetching EPID details:", error);
@@ -1009,13 +1439,12 @@ const BBMPKhata = () => {
                 icon: "error",
                 confirmButtonText: "OK",
             });
-        }
-
-
-        finally {
+        } finally {
             stop_loader();
         }
+
     };
+
     const customStyles = {
         headCells: {
             style: {
@@ -1030,31 +1459,38 @@ const BBMPKhata = () => {
         },
     };
     const columns = [
-        { name: 'S.No', selector: (row, index) => index + 1, width: '70px' },
-        { name: 'Property ID', selector: () => epid_fetchedData?.PropertyID },
+        { name: 'S.No', selector: (row, index) => index + 1, width: '70px', center: true },
+        { name: 'Property ID', width: '140px', selector: () => epid_fetchedData?.PropertyID, center: true },
         {
-            name: 'Owner Name',
-            cell: (row) => (
+            name: 'Owner Name', center: true,
+
+            cell: () => (
                 <div style={{
-                    maxWidth: '150px',
-                    overflowX: 'auto',
-                    whiteSpace: 'nowrap'
+
                 }}>
-                    {row.OwnerName}
+                    {epid_fetchedData?.OwnerDetails?.[0].ownerName || 'N/A'}
                 </div>
             )
         },
-        { name: 'ID Type', selector: (row) => row.IdType },
-        { name: 'ID Number', selector: (row) => row.IdNumber },
+
+        { name: 'ID Type', width: '120px', selector: () => epid_fetchedData?.OwnerDetails?.[0].idType || 'N/A', center: true },
+        { name: 'ID Number', width: '220px', selector: () => epid_fetchedData?.OwnerDetails?.[0].idNumber || 'N/A', center: true },
         {
             name: 'Validate OTP',
+            width: '250px',
             cell: (row, index) => (
                 <div className='mb-3'><br />
                     <input
                         type="tel"
                         className="form-control mb-1"
                         placeholder="Mobile Number"
-                        value={phoneNumbers[index] ?? row.MobileNumber ?? ""}
+                        readOnly
+                        value={
+                            phoneNumbers[index] ??
+                            row.MobileNumber ??
+                            epid_fetchedData?.OwnerDetails?.[0]?.mobileNumber ??
+                            ""
+                        }
                         onChange={(e) => handlePhoneNumberChange(e, index)}
                         maxLength={10}
                         disabled={otpSentIndex === index}
@@ -1063,56 +1499,261 @@ const BBMPKhata = () => {
                         <label className="text-danger">{phoneErrors[index]}</label>
                     )}
 
-                    {otpSentIndex !== index ? (
-                        <button
-                            className="btn btn-primary btn-sm mt-1"
-                            onClick={() => handleSendOtp(index, row)}
-                        >
-                            Send OTP
-                        </button>
+                    {/* Show "PHONE NUMBER VERIFIED" if this index is verified */}
+                    {verifiedNumbers[index] ? (
+                        <div className="text-success font-weight-bold mt-2">
+                            OTP Verified <i className="fa fa-check-circle"></i>
+                        </div>
                     ) : (
-                        <>
-                            <div className="mb-1">
-                                <div className="input-group">
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Enter OTP"
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        maxLength={6}
-                                    />
+                        // Else show OTP input, verify button, and timer or resend button
+                        otpSentIndex !== index ? (
+                            <button
+                                className="btn btn-primary btn-sm mt-1"
+                                onClick={() => handleSendOtp(index, row)}
+                            >
+                                Send OTP
+                            </button>
+                        ) : (
+                            <>
+                                <div className="mb-1">
+                                    <div className="input-group">
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Enter OTP"
+                                            value={otpInputs[index] || ""}
+                                            onChange={(e) => handleOtpChange(e, index)}
+                                            maxLength={6}
+                                        />
+                                    </div>
+                                    <button
+                                        className="btn btn-success btn-sm mt-2"
+                                        disabled={timer <= 0}
+                                        onClick={() => handleVerifyOtp(index, row)}
+                                    >
+                                        Verify OTP
+                                    </button>
                                 </div>
-                                <button
-                                    className="btn btn-success btn-sm mt-2"
-
-                                    disabled={timer <= 0}
-                                >
-                                    Verify OTP
-                                </button>
-                            </div>
-                            {timer > 0 ? (
-                                <p className="text-danger mb-0">Resend OTP in: {timer}s</p>
-                            ) : (
-                                <button
-                                    className="btn btn-warning btn-sm"
-                                    onClick={handleResendOtp}
-                                >
-                                    Resend OTP
-                                </button>
-
-                            )}
-                        </>
+                                {timer > 0 ? (
+                                    <p className="text-danger mb-0">Resend OTP in: {timer}s</p>
+                                ) : (
+                                    <button
+                                        className="btn btn-warning btn-sm"
+                                        onClick={() => handleResendOtp(index, row)}
+                                    >
+                                        Resend OTP
+                                    </button>
+                                )}
+                            </>
+                        )
                     )}
                 </div>
-            )
+            ), center: true
         }
 
 
+
+
     ];
+
+    //EPID Save and proceed next button
+    //   const handleSaveAndProceed = async (epidNumber) => {
+    //     const totalRows = fetchedEPIDData?.[0]?.OwnerDetails?.length;
+
+    //     if (totalRows > 0) {
+    //         for (let i = 0; i < totalRows; i++) {
+    //             if (!verifiedNumbers[i]) {
+    //                 Swal.fire({
+    //                     icon: 'error',
+    //                     title: 'OTP Not Verified',
+    //                     text: `Please verify OTP for record #${i + 1} before proceeding.`,
+    //                 });
+    //                 return;
+    //             }
+    //         }
+    //     }
+
+    //     console.log("All OTPs verified. Proceeding...");
+    // const storedData = sessionStorage.getItem("epid_JSON");
+    // let parsedData = "";
+    // if (storedData) {
+    //    parsedData = JSON.parse(storedData);
+    //   console.log("Retrieved Fetched Data from session:", parsedData);
+
+    // }
+    //     // Prepare payload
+    //     const payload = {
+    //         lkrS_ID: 0,
+    //         lkrS_LANDTYPE: "khata",
+    //         lkrS_EPID: epid_fetchedData?.PropertyID,
+    //         lkrS_SITEAREA_SQFT: 0,
+    //         lkrS_SITEAREA_SQMT: 0,
+    //         lkrS_REMARKS: "string",
+    //         lkrS_ADDITIONALINFO: "string",
+    //         lkrS_CREATEDBY: 0,
+    //         lkrS_CREATEDNAME: "string",
+    //         lkrS_CREATEDROLE: "string",
+    //         khatA_DETAILS: {
+    //             khatA_ID: 0,
+    //             khatA_LKRS_ID: 0,
+    //             khatA_EPID: epid_fetchedData?.PropertyID,
+    //             khatA_JSON: parsedData,
+    //             khatA_TYPE: "string",
+    //             khatA_REMARKS: "string",
+    //             khatA_ADDITIONALINFO: "string",
+    //             khatA_CREATEDBY: 0,
+    //             khatA_CREATEDNAME: "string",
+    //             khatA_CREATEDROLE: "string"
+    //         },
+    //         khatA_OWNER_DETAILS: fetchedEPIDData?.[0]?.OwnerDetails.map(owner => ({
+    //             owN_ID: 0,
+    //             owN_LKRS_ID: 0,
+    //             owN_NAME_KN: owner.owN_NAME_KN || "string",
+    //             owN_NAME_EN: epid_fetchedData?.OwnerDetails?.[0].ownerName || "string",
+    //             owN_IDTYPE: epid_fetchedData?.OwnerDetails?.[0].idType || "string",
+    //             owN_IDNUMBER: epid_fetchedData?.OwnerDetails?.[0].idNumber ||  "string",
+    //             owN_RELATIONTYPE: owner.owN_RELATIONTYPE || "string",
+    //             owN_RELATIONNAME: owner.owN_RELATIONNAME || "string",
+    //             owN_MOBILENUMBER:  epid_fetchedData?.OwnerDetails?.[0]?.mobileNumber || "string",
+    //             owN_REMARKS: owner.owN_REMARKS || "string",
+    //             owN_ADDITIONALINFO: owner.owN_ADDITIONALINFO || "string",
+    //             owN_CREATEDBY: 0,
+    //             owN_CREATEDNAME: "string",
+    //             owN_CREATEDROLE: "string"
+    //         })),
+    //         surveY_NUMBER_DETAILS: null
+    //     };
+    // const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWRtaW4iLCJleHAiOjE3NDgyNjA3MTIsImlzcyI6IkxBWU9VVEtIQVRBQVBJSXNzdWVyIiwiYXVkIjoiTEFZT1VUS0hBVEFBUElBdWRpZW5jZSJ9.kBytfpwuMqLSOkueyLeMm9WYnJuUsF92IFmZoisTj_0";
+    //     try {
+    //         const response = await fetch('https://testapps.bbmpgov.in/LayoutKhataAPI/api/LKRS/fnInsertLKRSinfo', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Accept': 'text/plain',
+    //                 'Content-Type': 'application/json',
+    //                 'Authorization': `Bearer ${token}`
+    //             },
+    //             body: JSON.stringify(payload)
+    //         });
+    // console.log(payload);
+    //         const result = await response.json();
+
+    //         if (response.ok) {
+    //             Swal.fire({
+    //                 icon: 'success',
+    //                 title: 'Success',
+    //                 text: 'Data submitted successfully!',
+    //             });
+    //         } else {
+    //             Swal.fire({
+    //                 icon: 'error',
+    //                 title: 'Error',
+    //                 text: result?.message || 'Something went wrong.',
+    //             });
+    //         }
+    //     } catch (error) {
+    //         console.error("API Error:", error);
+    //         Swal.fire({
+    //             icon: 'error',
+    //             title: 'Network Error',
+    //             text: 'Failed to submit data. Please try again later.',
+    //         });
+    //     }
+    // };
+
+    const handleSaveAndProceed = async (epidNumber) => {
+        const totalRows = fetchedEPIDData?.[0]?.OwnerDetails?.length;
+
+        if (totalRows > 0) {
+            for (let i = 0; i < totalRows; i++) {
+                if (!verifiedNumbers[i]) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'OTP Not Verified',
+                        text: `Please verify OTP for record #${i + 1} before proceeding.`,
+                    });
+                    return;
+                }
+            }
+        }
+
+        const storedData = sessionStorage.getItem("epid_JSON");
+        let parsedData = storedData ? JSON.parse(storedData) : "";
+
+        const payload = {
+            lkrS_ID: 0,
+            lkrS_LANDTYPE: "khata",
+            lkrS_EPID: epid_fetchedData?.PropertyID,
+            lkrS_SITEAREA_SQFT: 0,
+            lkrS_SITEAREA_SQMT: 0,
+            lkrS_REMARKS: "string",
+            lkrS_ADDITIONALINFO: "string",
+            lkrS_CREATEDBY: createdBy,
+            lkrS_CREATEDNAME: createdName,
+            lkrS_CREATEDROLE: roleID,
+            khatA_DETAILS: {
+                khatA_ID: 0,
+                khatA_LKRS_ID: 0,
+                khatA_EPID: epid_fetchedData?.PropertyID,
+                khatA_JSON: storedData,
+                khatA_TYPE: "string",
+                khatA_REMARKS: "string",
+                khatA_ADDITIONALINFO: "string",
+                khatA_CREATEDBY: createdBy,
+                khatA_CREATEDNAME: createdName,
+                khatA_CREATEDROLE: roleID
+            },
+            khatA_OWNER_DETAILS: fetchedEPIDData?.[0]?.OwnerDetails.map(owner => ({
+                owN_ID: 0,
+                owN_LKRS_ID: 0,
+                owN_NAME_KN: owner.owN_NAME_KN || "string",
+                owN_NAME_EN: epid_fetchedData?.OwnerDetails?.[0].ownerName || "string",
+                owN_IDTYPE: epid_fetchedData?.OwnerDetails?.[0].idType || "string",
+                owN_IDNUMBER: epid_fetchedData?.OwnerDetails?.[0].idNumber || "string",
+                owN_RELATIONTYPE: owner.owN_RELATIONTYPE || "string",
+                owN_RELATIONNAME: owner.owN_RELATIONNAME || "string",
+                owN_MOBILENUMBER: epid_fetchedData?.OwnerDetails?.[0]?.mobileNumber || "string",
+                owN_REMARKS: owner.owN_REMARKS || "string",
+                owN_ADDITIONALINFO: owner.owN_ADDITIONALINFO || "string",
+                owN_CREATEDBY: createdBy,
+                owN_CREATEDNAME: createdName,
+                owN_CREATEDROLE: roleID
+            })),
+            surveY_NUMBER_DETAILS: null
+        };
+
+        try {
+            const response = await submitEPIDDetails(payload);
+
+            if (response.responseStatus === true) {
+                sessionStorage.setItem('LKRSID', response.lkrsid);
+                Swal.fire({
+                    title: response.responseMessage,
+                    text: response.display_LKRSID,
+                    icon: "success",
+                    confirmButtonText: "OK",
+                });
+            } else {
+
+                Swal.fire({
+                    text: response.responseMessage || "Failed to resend OTP",
+                    icon: "error",
+                    confirmButtonText: "OK",
+                });
+            }
+        } catch (error) {
+            console.error("Failed to insert a data:", error);
+            Swal.fire({
+                text: "Something went wrong. Please try again later.",
+                icon: "error",
+                confirmButtonText: "OK",
+            });
+        }
+    };
+
     return (
         <div className="row g-3">
             {loading && <Loader />}
+
             <div className="col-12 col-sm-12 col-md-4 col-lg-4 col-xl-4  mt-3">
                 <div className="form-group mt-2">
                     <label className='form-label'>Enter EPID of eKhata of A-property <span className='mandatory_color'>*</span></label>
@@ -1157,17 +1798,7 @@ const BBMPKhata = () => {
                         />
 
                     </div>
-                    <div className="col-12 col-sm-12 col-md-12 col-lg-12 col-xl-12 mt-3">
-                        <h5>Property details as per BBMP eKhata</h5>
-                        {/* <DataTable
-                            columns={owner_columns}
-                            data={epid_fetchedData?.OwnerDetails || []}
-                            pagination
-                            noHeader
-                            dense={false}
-                            customStyles={customStyles}
-                        /> */}
-                    </div>
+
                     <div className='row'>
                         <div className="col-0 col-sm-0 col-md-6 col-lg-6 col-xl-6 "></div>
                         <div className="col-6 col-sm-6 col-md-3 col-lg-3 col-xl-3 ">
@@ -1179,7 +1810,7 @@ const BBMPKhata = () => {
                         <div className="col-6 col-sm-6 col-md-3 col-lg-3 col-xl-3">
                             <div className="form-group">
                                 <label></label>
-                                <button className='btn btn-primary btn-block'>Save and Proceed Next</button>
+                                <button className='btn btn-primary btn-block' onClick={() => handleSaveAndProceed(epidNumber)}>Save and Proceed Next</button>
                             </div>
                         </div>
                     </div>
@@ -1209,6 +1840,23 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
     const fileApprovalMapInputRef = useRef(null);
 
 
+    const [createdBy, setCreatedBy] = useState(null);
+    const [createdName, setCreatedName] = useState('');
+    const [roleID, setRoleID] = useState('');
+    const [LKRSID, setLKRSID] = useState('');
+    useEffect(() => {
+        const storedCreatedBy = sessionStorage.getItem('createdBy');
+        const storedCreatedName = sessionStorage.getItem('createdName');
+        const storedRoleID = sessionStorage.getItem('RoleID');
+
+        const LKRSID_session = sessionStorage.getItem('LKRSID');
+        setLKRSID(LKRSID_session);
+        setCreatedBy(storedCreatedBy);
+        setCreatedName(storedCreatedName);
+        setRoleID(storedRoleID);
+
+
+    }, []);
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
@@ -1231,8 +1879,8 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
             setErrors({ ...errors, approvalMap: "Only PDF files are allowed." });
             return;
         }
-        if (file.size > 5 * 1024 * 1024) {
-            setErrors({ ...errors, approvalMap: "File size must be less than 5MB." });
+        if (file.size > 50 * 1024 * 1024) {
+            setErrors({ ...errors, approvalMap: "File size must be less than 50MB." });
             return;
         }
         setFormData({ ...formData, approvalMap: file });
@@ -1270,7 +1918,7 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
             newErrors.approvalOrder = "Please upload a valid PDF (max 5MB).";
         }
         if (!formData.approvalMap) {
-            newErrors.approvalMap = "Please upload a valid PDF (max 5MB).";
+            newErrors.approvalMap = "Please upload a valid PDF (max 50MB).";
         }
         if (!formData.dateOfApproval) {
             newErrors.dateOfApproval = "Date of approval is required.";
@@ -1284,40 +1932,94 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
         return Object.keys(newErrors).length === 0;
     };
     //Approval  Order Save button
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!validateForm()) return;
+        const payload = {
+            apR_ID: 0,
+            apR_LKRS_ID: LKRSID,
+            apR_APPROVAL_NO: formData.layoutApprovalNumber,
+            apR_APPROVAL_DATE: new Date(formData.dateOfApproval).toISOString(),
+            apR_REMARKS: "string",
+            apR_ADDITIONALINFO: "string",
+            apR_CREATEDBY: createdBy,
+            apR_CREATEDNAME: createdName,
+            apR_CREATEDROLE: roleID,
+            apR_APPROVALDESIGNATION: formData.approvalAuthority,
+        };
 
-        if (records.length > 0) {
-            // Only update the first/only record
-            const updatedRecords = [...records];
-            updatedRecords[0] = formData;
-            setRecords(updatedRecords);
-        } else {
-            // Add the first record only if none exists
-            setRecords([formData]);
+        try {
+            const response = await insertApprovalInfo(payload);
+
+            if (response.responseStatus === true) {
+                Swal.fire({
+                    title: response.responseMessage,
+                    icon: "success",
+                    confirmButtonText: "OK",
+                }).then(async () => {
+                    // Reset inputs and form
+                    if (fileApprovalMapInputRef.current) fileApprovalMapInputRef.current.value = "";
+                    if (fileApprovalOrderInputRef.current) fileApprovalOrderInputRef.current.value = "";
+
+                    setFormData({
+                        layoutApprovalNumber: "",
+                        approvalOrder: null,
+                        approvalMap: null,
+                        dateOfApproval: "",
+                        approvalAuthority: "",
+                    });
+
+                    setErrors({});
+                    setEditIndex(null);
+
+                    // Fetch list and update table
+                    try {
+                        const listPayload = {
+                            level: 1,
+                            aprLkrsId: 60,
+                            aprId: 0,
+                        };
+
+                        const listResponse = await listApprovalInfo(listPayload);
+
+                        if (Array.isArray(listResponse)) {
+                            const formattedList = listResponse.map(item => {
+                                // Try to match approval number with current formData if available
+                                const isCurrent = item.apr_Approval_No === formData.layoutApprovalNumber;
+
+                                return {
+                                    layoutApprovalNumber: item.apr_Approval_No,
+                                    dateOfApproval: item.apr_Approval_Date,
+                                    approvalOrder: isCurrent ? formData.approvalOrder : null,
+                                    approvalMap: isCurrent ? formData.approvalMap : null,
+                                    approvalAuthority: item.apR_APPROVALDESIGNATION,
+                                };
+                            });
+
+                            // Replace old records with fresh list from API
+                            setRecords(formattedList);
+
+                        }
+
+                    } catch (error) {
+                        console.error("Error fetching approval list:", error);
+                    }
+                });
+            }
+
+            else {
+                Swal.fire({
+                    title: response.responseMessage,
+                    icon: "error",
+                    confirmButtonText: "OK",
+                });
+            }
+        } catch (error) {
+            console.error("Error saving approval info:", error);
         }
-
-        // ✅ Reset file input manually
-        if (fileApprovalMapInputRef.current) {
-            fileApprovalMapInputRef.current.value = "";
-        }
-
-        if (fileApprovalOrderInputRef.current) {
-            fileApprovalOrderInputRef.current.value = "";
-        }
-
-        // Reset form
-        setFormData({
-            layoutApprovalNumber: "",
-            approvalOrder: null,
-            approvalMap: null,
-            dateOfApproval: "",
-            approvalAuthority: "",
-        });
-
-        setErrors({});
-        setEditIndex(null);
     };
+
+
+
     const handleEdit = (index) => {
         setEditIndex(index);
         const selectedRecord = records[index];
@@ -1337,8 +2039,8 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
     const columns = [
         {
             name: t('translation.BDA.table.slno'),
-            cell: (row, index) => index + 1, // Adding 1 to start serial numbers from 1
-            width: '80px', // Adjust width as needed
+            cell: (row, index) => index + 1,
+            width: '80px',
         },
         {
             name: t('translation.BDA.table.approvalNo'),
@@ -1467,12 +2169,12 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
 
 
     //Order of site Release
-
     const [release_formData, setRelease_FormData] = useState({
         layoutOrderNumber: "",
         release_Order: null,
         dateOfOrder: "",
         orderAuthority: "",
+        releaseType: ''
     });
     const [release_errors, setRelease_Errors] = useState({});
     const [order_records, setOrder_Records] = useState([]);
@@ -1604,50 +2306,120 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
     };
     const validateOrderForm = () => {
         let newErrors = {};
+
         if (!release_formData.layoutOrderNumber.trim()) {
             newErrors.layoutOrderNumber = "Layout Order of site release Number is required.";
         }
+
         if (!release_formData.release_Order) {
             newErrors.release_Order = "Please upload a valid PDF (max 5MB).";
         }
-        if (!release_formData.dateOfOrder) {
-            newErrors.dateOfOrder = "Date of approval is required.";
-        }
+
         if (!release_formData.dateOfOrder) {
             newErrors.dateOfOrder = "Date of approval is required.";
         } else if (new Date(release_formData.dateOfOrder) > new Date()) {
             newErrors.dateOfOrder = "Future dates are not allowed.";
         }
+
         if (!release_formData.orderAuthority.trim()) {
             newErrors.orderAuthority = "Approval authority designation is required.";
         }
+
+        if (!release_formData.releaseType) {
+            newErrors.releaseType = "Please select a Release Type.";
+        }
+
         setRelease_Errors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
-    const handleOrderSave = () => {
+
+    const handleOrderSave = async () => {
+
+     
+
+
         if (!validateOrderForm()) return;
-        if (edit_OrderIndex !== null) {
-            // Update existing record
-            const updatedRecords = [...order_records];
-            updatedRecords[edit_OrderIndex] = release_formData;
-            setOrder_Records(updatedRecords);
-            setEdit_OrderIndex(null);
-        } else {
-            // Add new record
-            setOrder_Records([...order_records, release_formData]);
+        const payload = {
+            sitE_RELS_ID: 0,
+            sitE_RELS_LKRS_ID: 60,
+            sitE_RELS_ORDER_NO: release_formData.layoutOrderNumber,
+            sitE_RELS_DATE: release_formData.dateOfOrder,
+            sitE_RELS_REMARKS: "string",
+            sitE_RELS_ADDITIONALINFO: "string",
+            sitE_RELS_CREATEDBY: createdBy,
+            sitE_RELS_CREATEDNAME: createdName,
+            sitE_RELS_CREATEDROLE: roleID,
+            sitE_RELS_APPROVALDESIGNATION: release_formData.orderAuthority,
+        };
+
+        try {
+            const response = await insertReleaseInfo(payload);
+
+            if (response.responseStatus === true) {
+                Swal.fire({
+                    title: response.responseMessage,
+                    icon: "success",
+                    confirmButtonText: "OK",
+                }).then(async () => {
+                    // Reset inputs and form
+                    if (fileReleaseOrderInputRef.current) {
+                        fileReleaseOrderInputRef.current.value = "";
+                    }
+                    // Reset form
+                    setRelease_FormData({
+                        layoutOrderNumber: "",
+                        release_Order: null,
+                        dateOfOrder: "",
+                        orderAuthority: "",
+                    });
+                    setRelease_Errors({});
+
+                    // Fetch list and update table
+                    try {
+                        const listPayload = {
+                            level: 1,
+                            lkrsId: 60,
+                            siteRelsId: 0,
+                        };
+
+                        const listResponse = await listReleaseInfo(listPayload);
+
+                        if (Array.isArray(listResponse)) {
+                            const formattedList = listResponse.map(item => {
+                                // Try to match approval number with current formData if available
+                                const isCurrent = item.apr_Approval_No === release_formData.layoutApprovalNumber;
+
+                                return {
+                                    layoutApprovalNumber: item.apr_Approval_No,
+                                    dateOfApproval: item.apr_Approval_Date,
+                                    approvalOrder: isCurrent ? release_formData.approvalOrder : null,
+                                    approvalMap: isCurrent ? release_formData.approvalMap : null,
+                                    approvalAuthority: item.apR_APPROVALDESIGNATION,
+                                };
+                            });
+
+                            // Replace old records with fresh list from API
+                            setOrder_Records(formattedList);
+
+                        }
+
+                    } catch (error) {
+                        console.error("Error fetching approval list:", error);
+                    }
+                });
+            }
+
+            else {
+                Swal.fire({
+                    title: response.responseMessage,
+                    icon: "error",
+                    confirmButtonText: "OK",
+                });
+            }
+        } catch (error) {
+            console.error("Error saving approval info:", error);
         }
-        // ✅ Reset file input manually
-        if (fileReleaseOrderInputRef.current) {
-            fileReleaseOrderInputRef.current.value = "";
-        }
-        // Reset form
-        setRelease_FormData({
-            layoutOrderNumber: "",
-            release_Order: null,
-            dateOfOrder: "",
-            orderAuthority: "",
-        });
-        setRelease_Errors({});
+
     };
     const handleAddMoreRelease_again = () => {
         setIsOrder_Editing(true); // Enable editing mode
@@ -1806,7 +2578,7 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
                                         </div>
                                     )}
 
-                                    <span className="note_color">{t('translation.BDA.Subdivision.fileSize&format')}</span><br />
+                                    <span className="note_color">{t('translation.BDA.Subdivision.fileSize&format50')}</span><br />
                                     {errors.approvalMap && <small className="text-danger">{errors.approvalMap}</small>}
                                 </div>
                             </div>
@@ -1835,7 +2607,7 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
                             <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3 mt-4">
                                 <div className="form-group">
                                     <button className="btn btn-primary btn-block" onClick={handleSave} disabled={!isEditing}>
-                                        {editIndex !== null ? t('translation.buttons.update') : 'Add'}
+                                        {editIndex !== null ? t('translation.buttons.update') : 'Save'}
                                     </button>
                                 </div>
                             </div>
@@ -1886,7 +2658,7 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
 
                     <div className="mt-5">
                         <div className="row">
-                            {/* Layout Approval Number */}
+                            {/* release Order Number */}
                             <div className="col-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
                                 <div className="form-group">
                                     <label className="form-label">
@@ -1907,7 +2679,7 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
 
                                 </div>
                             </div>
-                            {/* Date of Approval */}
+                            {/* Date of order */}
                             <div className="col-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
                                 <div className="form-group">
                                     <label className="form-label">
@@ -1927,7 +2699,7 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
                                     )}
                                 </div>
                             </div>
-                            {/* Scan & Upload Layout Approval order */}
+                            {/* Scan & Upload Layout release order */}
                             <div className="col-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
                                 <div className="form-group">
                                     <label className="form-label">
@@ -1976,9 +2748,7 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
                                     )}
                                 </div>
                             </div>
-
-
-                            {/* Approval Authority */}
+                            {/* release Authority */}
                             <div className="col-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
                                 <div className="form-group">
                                     <label className="form-label">
@@ -1997,6 +2767,62 @@ const BDA = ({ approval_details, setApprovalDetails, order_details, setOrderDeta
                                     {release_errors.orderAuthority && (
                                         <small className="text-danger">{release_errors.orderAuthority}</small>
                                     )}
+                                </div>
+                            </div>
+                            {/* Release Type */}
+                            <div className='col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3'>
+                                <div className="form-group mt-2">
+                                    <label className='form-label'>
+                                        Release Type <span className='mandatory_color'>*</span>
+                                    </label>
+                                </div>
+                                {release_errors.releaseType && (
+                                    <small className="text-danger">{release_errors.releaseType}</small>
+                                )}
+                            </div>
+                            <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+                                <div className="form-check">
+                                    <input
+                                        className="form-check-input me-2 radioStyle"
+                                        type="radio"
+                                        name="releaseType"
+                                        value="100"
+                                        checked={release_formData.releaseType === "100"}
+                                        onChange={(e) =>
+                                            setRelease_FormData({ ...release_formData, releaseType: e.target.value })
+                                        }
+                                    />
+                                    <label className="form-check-label fw-bold">100</label>
+                                </div>
+                            </div>
+                            <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+                                <div className="form-check">
+                                    <input
+                                        className="form-check-input me-2 radioStyle"
+                                        type="radio"
+                                        name="releaseType"
+                                        value="60*40"
+                                        checked={release_formData.releaseType === "60 * 40"}
+                                        onChange={(e) =>
+                                            setRelease_FormData({ ...release_formData, releaseType: e.target.value })
+                                        }
+                                    />
+                                    <span className="form-check-label fw-bold">60 * 40</span>
+                                </div>
+                            </div>
+                            <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
+                                <div className="form-check">
+                                    <input
+                                        className="form-check-input me-2 radioStyle"
+                                        type="radio"
+                                        name="releaseType"
+                                        value="40*30*30"
+                                        checked={release_formData.releaseType === "40 * 30 * 30"}
+                                        onChange={(e) =>
+                                            setRelease_FormData({ ...release_formData, releaseType: e.target.value })
+                                        }
+                                    />
+                                    <span className="form-check-label fw-bold">40 * 30 * 30</span>
                                 </div>
                             </div>
                             <div className='col-md-10'></div>
@@ -3125,42 +3951,12 @@ const IndividualGPSBlock = () => {
                                     )}
                                 </div>
                             </div>
-                            <div className='col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3'>
-                                <div className="form-group mt-2">
-                                    <label className='form-label'>
-                                        Release <span className='mandatory_color'>*</span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
-                                <div className="form-check">
-                                    <input className="form-check-input me-2 radioStyle"
-                                        type="radio"
-                                    />
-                                    <label className="form-check-label fw-bold">100</label>
-                                </div>
-                            </div>
-                            <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
-                                <div className="form-check">
-                                    <input className="form-check-input me-2 radioStyle"
-                                        type="radio"
-                                    />
-                                    <span className="form-check-label fw-bold">60 * 40</span>
-                                </div>
-                            </div>
-                            <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
-                                <div className="form-check">
-                                    <input className="form-check-input me-2 radioStyle"
-                                        type="radio"
-                                    />
-                                    <span className="form-check-label fw-bold">40 * 30 * 30</span>
-                                </div>
-                            </div>
+
                         </div>
 
 
                         <hr className='mt-1' style={{ border: '1px dashed #0077b6' }} />
-                        <h3 className='fw-bold fs-7'>Site / Plot wise Details &nbsp;&nbsp;<label className='text-danger' style={{ fontSize: '14px' }}>[ Note: Please enter Correctly as eKhata will be issued as per this ]</label></h3>
+                        <h4 className='fw-bold fs-7'>Site / Plot wise Details &nbsp;&nbsp;<label className='text-danger' style={{ fontSize: '14px' }}>[ Note: Please enter Correctly as eKhata will be issued as per this ]</label></h4>
 
 
                         <div className="row mt-4">
@@ -4079,9 +4875,6 @@ const IndividualRegularTable = ({ data, setData, totalSitesCount, onSave, onEdit
     const { loading, start_loader, stop_loader } = useLoader(); // Use loader context
 
     const totalAddedSites = data.length;
-
-
-
     const handleDeleteRow = (id) => {
         console.log("Before deletion:", data);
         let updatedData = [];
@@ -4097,8 +4890,6 @@ const IndividualRegularTable = ({ data, setData, totalSitesCount, onSave, onEdit
         console.log("After deletion:", updatedData);
 
     };
-
-
     const columns = React.useMemo(
         () => [
             {
@@ -4213,8 +5004,6 @@ const IndividualRegularTable = ({ data, setData, totalSitesCount, onSave, onEdit
         ],
         []
     );
-
-
     const {
         getTableProps,
         getTableBodyProps,
@@ -4249,7 +5038,6 @@ const IndividualRegularTable = ({ data, setData, totalSitesCount, onSave, onEdit
         fontWeight: "500",
         margin: "0 2px",
     };
-
     const disabledBtnStyle = {
         ...paginationBtnStyle,
         backgroundColor: "#e5e7eb",
@@ -4593,7 +5381,7 @@ const ECDetailsBlock = () => {
                                     </div>
                                 </div>
                             )}
-                            
+
                         </div>
                     </div>
 
@@ -4601,10 +5389,10 @@ const ECDetailsBlock = () => {
                 </div>
             </div>
             {(isRegistered === 'no' || isRegistered === 'yes' || hasJDA === 'no') && (
-    <Owner_EKYCBlock />
-  )}
+                <Owner_EKYCBlock />
+            )}
 
-  {isRegistered === 'yes' && <JDA_EKYCBlock />}
+            {['yes', 'no'].includes(isRegistered) && <JDA_EKYCBlock />}
 
         </div>
     );
@@ -4625,10 +5413,10 @@ const Owner_EKYCBlock = () => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const otpInputsRef = useRef([]);
 
-   const handleRadioChange = (e) => {
-    console.log("Selected:", e.target.value);
-    setSelectedOption(e.target.value);
-};
+    const handleRadioChange = (e) => {
+        console.log("Selected:", e.target.value);
+        setSelectedOption(e.target.value);
+    };
     const handlePhoneChange = (e) => {
         const value = e.target.value;
         if (/^\d{0,10}$/.test(value)) {
@@ -4780,123 +5568,244 @@ const Owner_EKYCBlock = () => {
         const updated = representatives.filter((_, index) => index !== indexToRemove);
         setRepresentatives(updated);
     };
+    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWRtaW4iLCJleHAiOjE3NDc5MzAwNjUsImlzcyI6IkxBWU9VVEtIQVRBQVBJSXNzdWVyIiwiYXVkIjoiTEFZT1VUS0hBVEFBUElBdWRpZW5jZSJ9.mdBXC-6CQS8EoKkjUmXVvuhAvgI33bvTyTeVBtiAURw";
 
     const handleDoEKYC = async () => {
-        try {
-            const response = await fetch(
-                'https://localhost:7277/api/Bhoomi/RequestEKYC?OwnerNumber=1&BOOK_APP_NO=2&PROPERTY_CODE=1&Page=Search',
-                {
-                    method: 'POST',
-                    headers: {
-                        Accept: 'text/plain',
-                        Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWRtaW4iLCJleHAiOjE3NDc2NjQ5MzUsImlzcyI6IkxBWU9VVEtIQVRBQVBJSXNzdWVyIiwiYXVkIjoiTEFZT1VUS0hBVEFBUElBdWRpZW5jZSJ9.jSFWUv-KxnY-NWqDaeITa_X2giKykyATXpjS0VBh8ME',
-                    },
-                    body: '', // No payload, just like the curl
+        const swalResult = await Swal.fire({
+            title: 'Redirecting for e-KYC Verification',
+            text: 'You are being redirected to another tab for e-KYC verification. Once the e-KYC verification is complete, please return to this tab and click the verify e-KYC button.',
+            icon: 'info',
+            confirmButtonText: 'OK',
+            allowOutsideClick: false
+        });
+
+        if (swalResult.isConfirmed) {
+            try {
+                const response = await fetch(
+                    'https://localhost:7277/api/Bhoomi/RequestEKYC?OwnerNumber=1&BOOK_APP_NO=2&PROPERTY_CODE=1&Page=Search',
+                    {
+                        method: 'POST',
+                        headers: {
+                            Accept: 'text/plain',
+                            Authorization: `Bearer ${token}`,
+                        },
+                        body: '',
+                    }
+                );
+
+                const resultUrl = await response.text();
+
+                console.log('Response URL:', resultUrl);
+
+                if (resultUrl) {
+                    window.open(resultUrl, '_blank');
+                } else {
+                    console.warn('No redirect URL returned');
                 }
-            );
-
-            const resultUrl = await response.text();
-
-            console.log('Response URL:', resultUrl);
-
-            // Redirect to the URL returned from API
-            if (resultUrl) {
-                window.open(resultUrl, '_blank');
-            } else {
-                console.warn('No redirect URL returned');
+            } catch (error) {
+                console.error('eKYC API call failed:', error);
             }
-        } catch (error) {
-            console.error('eKYC API call failed:', error);
         }
     };
 
-    const ownerList = [
-        { name: "John Doe", phone: "9876543210" },
-        { name: "Jane Smith", phone: "9123456789" },
-        { name: "Ravi Kumar", phone: "9988776655" },
-    ];
+
+    const [txnno, setTxnno] = useState('');
+    const [ekycData, setEkycData] = useState(null);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [ownerData, setOwnerData] = useState(null);
+
+    const fetchEKYCOwnerDetails = async () => {
+        try {
+            const response = await axios.get(
+                'https://localhost:7277/api/Bhoomi/GET_BBD_NCL_OWNER_BYEKYCTRANSACTION',
+                {
+                    params: {
+                        transactionNumber: 83,
+                        OwnerType: 'NEWOWNER',
+                    },
+                    headers: {
+                        'accept': 'text/plain',
+                        'Authorization': `Bearer ${token}`, // truncated
+                    },
+                }
+            );
+
+            setOwnerData(response.data); // assuming it's a single object
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
+    };
+
+
+
+
+    const [ownerList, setOwnerList] = useState([
+        { name: 'John Doe', phone: '9876543210' },
+        { name: 'Jane Smith', phone: '9123456789' },
+        { name: 'Ravi Kumar', phone: '9988776655' },
+    ]);
     const [selectedOwner, setSelectedOwner] = useState(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [showInput, setShowInput] = useState(false);
+    const [newOwnerName, setNewOwnerName] = useState('');
+    const [ownerNameInput, setOwnerNameInput] = useState('');
+
+    const handleAddOwner = (e) => {
+        if (e.key === 'Enter' && newOwnerName.trim()) {
+            const newOwner = { name: newOwnerName.trim(), phone: '' };
+            const updatedList = [...ownerList, newOwner];
+            setOwnerList(updatedList);
+            setSelectedOwner(newOwner);
+            setOwnerNameInput(newOwner.name);
+            setNewOwnerName('');
+            setShowInput(false);
+            setIsDropdownOpen(false);
+        }
+    };
+    const buttonRef = useRef(null);
+    const [dropdownWidth, setDropdownWidth] = useState('auto');
+
+    useEffect(() => {
+        if (buttonRef.current) {
+            setDropdownWidth(buttonRef.current.offsetWidth + "px");
+        }
+    }, [isDropdownOpen]); // update width when dropdown opens
+
+
 
     return (
-        <div className="card"> {loading && <Loader />}
-            <div className="card-header layout_btn_color" >
-                <h5 className="card-title" style={{ textAlign: 'center' }}>Owner/Representative eKYC</h5>
+        <div>
 
-            </div>
-            <div className="card-body">
-                <div className='row'>
-                    <div className="col-12 col-sm-12 col-md-4 col-lg-4 col-xl-4 mb-3">
-                        <label className="form-label">Representative Name : </label>
-                    </div>
-                    <div className="col-12 col-sm-12 col-md-4 col-lg-4 col-xl-4" >
-                        <div className="form-check">
-                            <input
-                                className="form-check-input radioStyle"
-                                type="radio"
-                                name="userType"
-                                value="owner"
-                                checked={selectedOption === 'owner'}
-                                onChange={handleRadioChange}
-                            />
-                            <label>Owner</label>
-                        </div>
-                    </div>
-                    <div className="col-12 col-sm-12 col-md-4 col-lg-4 col-xl-4" >
-                        <div className="form-check">
-                            <input
-                                className="form-check-input radioStyle"
-                                type="radio"
-                                name="userType"
-                                value="representative"
-                                checked={selectedOption === 'representative'}
-                                onChange={handleRadioChange}
-                            />
-                            <label>Owner Representative</label>
-                        </div>
-                    </div>
 
-                    <div className="col-12 col-sm-12 col-md-12 col-lg-12 col-xl-12 mt-3">
-                        <label className="form-label">Select Owner</label>
-                        <select
-                            className="form-control"
-                            onChange={(e) => {
-                                const selected = ownerList.find(owner => owner.name === e.target.value);
-                                setSelectedOwner(selected);
-                            }}
-                            defaultValue=""
-                        >
-                            <option value="" disabled>Select an owner</option>
-                            {ownerList.map((owner, idx) => (
-                                <option key={idx} value={owner.name}>{owner.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="col-12 col-sm-12 col-md-12 col-lg-12 col-xl-12 mt-3">
-                        {selectedOption === 'owner' && (
+            <div className="card"> {loading && <Loader />}
+                <div className="card-header layout_btn_color" >
+                    <h5 className="card-title" style={{ textAlign: 'center' }}>Owner/Owner representative eKYC</h5>
+
+                </div>
+                <div className="card-body">
+                    <div className='row'>
+                        <div className="col-12 col-sm-12 col-md-4 col-lg-4 col-xl-4 mb-3">
+                            <label className="form-label">Select Owner / Owner representative : </label>
+                        </div>
+                        <div className="col-12 col-sm-12 col-md-4 col-lg-4 col-xl-4" >
+                            <div className="form-check">
+                                <input
+                                    className="form-check-input radioStyle"
+                                    type="radio"
+                                    name="userType"
+                                    value="owner"
+                                    checked={selectedOption === 'owner'}
+                                    onChange={handleRadioChange}
+                                />
+                                <label>Owner</label>
+                            </div>
+                        </div>
+                        <div className="col-12 col-sm-12 col-md-4 col-lg-4 col-xl-4" >
+                            <div className="form-check">
+                                <input
+                                    className="form-check-input radioStyle"
+                                    type="radio"
+                                    name="userType"
+                                    value="representative"
+                                    checked={selectedOption === 'representative'}
+                                    onChange={handleRadioChange}
+                                />
+                                <label>Owner Representative</label>
+                            </div>
+                        </div>
+
+
+                        <div className="col-12 col-sm-12 col-md-12 col-lg-12 col-xl-12 mt-3">
                             <div className='row'>
                                 <div className="alert alert-info">[Note: Click on eKYC Status button once the ekyc is done to check verification status]</div>
-                                <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3" >
-                                    <label className="form-label">Owner Name</label>
+
+                                <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3 mt-2" >
+                                    <label className="form-label">Select Owner <span className='mandatory_color'>*</span></label>
                                 </div>
-                                <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3" >
+                                <div className="col-12 col-sm-12 col-md-7 col-lg-7 col-xl-7 mt-2">
+                                    <button
+                                        className="form-control text-start"
+                                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                        ref={buttonRef}  // attach ref here
+                                    >
+                                        {selectedOwner ? selectedOwner.name : "Select an owner"}
+                                    </button>
+
+                                    {isDropdownOpen && (
+                                        <ul
+                                            className="dropdown-menu show"
+                                            style={{
+                                                overflowY: "auto",
+                                                width: dropdownWidth,  // set exact width to match button
+                                                maxHeight: "250px", marginLeft: "13px",
+                                            }}
+                                        >
+                                            {ownerList.map((owner, index) => (
+                                                <li key={index}>
+                                                    <button
+                                                        className="dropdown-item"
+                                                        onClick={() => {
+                                                            setSelectedOwner(owner);
+                                                            setOwnerNameInput(owner.name);
+                                                            setIsDropdownOpen(false);
+                                                        }}
+                                                    >
+                                                        {owner.name}
+                                                    </button>
+                                                </li>
+                                            ))}
+
+                                            {showInput && (
+                                                <li className="px-3 py-2">
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        placeholder="Enter owner name"
+                                                        value={newOwnerName}
+                                                        onChange={(e) => setNewOwnerName(e.target.value)}
+                                                        onKeyDown={handleAddOwner}
+                                                        autoFocus
+                                                    />
+                                                </li>
+                                            )}
+
+                                            <li>
+                                                <button
+                                                    className="dropdown-item text-primary"
+                                                    onClick={() => setShowInput(true)}
+                                                >
+                                                    ➕ Add More
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    )}
+                                </div>
+                                <div className="col-0 col-sm-0 col-md-2 col-lg-2 col-xl-2 mt-2" ></div>
+
+                                <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3 mt-4" >
+                                    <label className="form-label">{selectedOption === 'owner' ? "Owner Name" : "Representative Name"}   <span className='mandatory_color'>*</span></label>
+                                </div>
+                                <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3 mt-4" >
                                     <input
                                         type="text"
+                                        readOnly
                                         className="form-control"
-                                        placeholder="Enter the Owner Name"
+                                        placeholder={selectedOption === 'owner' ? "Enter the Owner Name" : "Enter the Representative Name"}
+                                        value={ownerNameInput}
                                     />
                                 </div>
-                                <div className="col-12 col-sm-12 col-md-2 col-lg-2 col-xl-2" >
+                                <div className="col-12 col-sm-12 col-md-2 col-lg-2 col-xl-2 mt-4" >
                                     <button className='btn btn-info btn-block' onClick={handleDoEKYC}>Do eKYC</button>
                                 </div>
-                                <div className="col-12 col-sm-12 col-md-2 col-lg-2 col-xl-2" >
-                                    <button className='btn btn-info btn-block'>eKYC Status</button>
+                                <div className="col-12 col-sm-12 col-md-2 col-lg-2 col-xl-2 mt-4" >
+                                    <button className='btn btn-info btn-block' onClick={fetchEKYCOwnerDetails}>eKYC Status</button>
                                 </div>
                                 <div className="col-0 col-sm-0 col-md-3 col-lg-3 col-xl-2" ></div>
                                 {/* Phone Number and Verify OTP */}
                                 <div className="col-12 col-sm-12 col-md-12 col-lg-12 col-xl-12 mt-3">
                                     <div className="row mt-3">
                                         <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
-                                            <label className="form-label">Phone Number</label>
+                                            <label className="form-label">{selectedOption === 'owner' ? "Owner's Phone Number" : "Representative's Phone Number"}  <span className='mandatory_color'>*</span></label>
                                         </div>
                                         <div className="col-12 col-sm-12 col-md-3 col-lg-3 col-xl-3">
                                             <input
@@ -4967,125 +5876,78 @@ const Owner_EKYCBlock = () => {
                                     </div>
                                 </div>
                             </div>
-                        )}
-                        {selectedOption === 'representative' && (
-                            <div>
-                                <div className="alert alert-primary">[Note: Click on eKYC Status button once the ekyc is done to check verification status]
-                                </div>
-                                {representatives.map((rep, idx) => (
-                                    <div className="row mt-2" key={idx}>
-                                        {/* Representative Name */}
-                                        <div className="col-md-3">
-                                            <label className="form-label">Representative Name</label>
-                                        </div>
-                                        <div className="col-md-3">
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                placeholder="Enter the Representative Name"
-                                                value={rep.name}
-                                                onChange={(e) => {
-                                                    const updated = [...representatives];
-                                                    updated[idx].name = e.target.value;
-                                                    setRepresentatives(updated);
-                                                }}
-                                            />
-                                        </div>
 
-                                        {/* eKYC Buttons */}
-                                        <div className="col-md-2">
-                                            <button className='btn btn-info btn-block'>Do eKYC</button>
-                                        </div>
-                                        <div className="col-md-2">
-                                            <button className='btn btn-info btn-block'>eKYC Status</button>
-                                        </div>
-                                        {idx !== 0 && (
-                                            <div className="col-md-2">
-                                                <button
-                                                    className='btn btn-danger btn-block'
-                                                    onClick={() => handleRemoveRepresentative(idx)}
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        )}
-                                        {/* Phone Number and OTP */}
-                                        <div className="col-12 mt-3">
-                                            <div className="row">
-                                                <div className="col-md-3">
-                                                    <label className="form-label">Phone Number</label>
-                                                </div>
-                                                <div className="col-md-3">
-                                                    <input
-                                                        type="text"
-                                                        className="form-control"
-                                                        maxLength={10}
-                                                        value={rep.phoneNo}
-                                                        onChange={(e) => {
-                                                            const updated = [...representatives];
-                                                            updated[idx].phoneNo = e.target.value;
-                                                            setRepresentatives(updated);
-                                                        }}
-                                                        placeholder="Enter the Phone Number"
-                                                    />
-                                                </div>
-                                                <div className="col-md-2">
-                                                    {!rep.isOtpSent && (
-                                                        <button className="btn btn-info btn-block" onClick={() => handleSendOtp(idx)}>
-                                                            Send OTP
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
 
-                                            {rep.isOtpSent && (
-                                                <div className="row mt-2">
-                                                    <div className="col-md-3"></div>
-                                                    <div className="col-md-3 d-flex gap-2">
-                                                        {rep.otp.map((digit, digitIdx) => (
-                                                            <input
-                                                                key={digitIdx}
-                                                                type="text"
-                                                                maxLength={1}
-                                                                className="form-control text-center"
-                                                                style={{ width: '40px' }}
-                                                                value={digit}
-                                                                onChange={(e) => handleOtpChange(idx, digitIdx, e)}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                    <div className="col-md-3 d-flex gap-2">
-                                                        <button className="btn btn-success btn-block" disabled={rep.isVerifyDisabled}>
-                                                            Verify OTP
-                                                        </button>
-                                                        {rep.showResend && (
-                                                            <button className="btn btn-warning btn-block" onClick={() => handleResendOtp(idx)}>
-                                                                Resend OTP
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="col-12">
-                                            <hr />
-                                        </div>
-                                    </div>
-                                ))}
-                                <div className="mt-4">
-                                    <button className="btn btn-primary" onClick={handleAddRepresentative}>
-                                        Add More
-                                    </button>
-                                </div>
-                            </div>
-
-                        )}
+                        </div>
 
                     </div>
 
                 </div>
-            </div>
 
+            </div>
+            <div className="card">
+                <div className="card-header layout_btn_color" >
+                    <h5 className="card-title" style={{ textAlign: 'center' }}>ಇಕೆವೈಸಿ ವಿವರಗಳು / EKYC DETAILS</h5>
+
+                </div>
+                <div className="card-body">
+
+                    {/* Error Message */}
+                    {errorMessage && <p className="text-danger text-center">{errorMessage}</p>}
+
+                    {/* Table */}
+
+                    <table className="table table-striped table-bordered table-hover shadow" style={{ fontFamily: 'Arial, sans-serif' }}>
+                        <thead className="table-light">
+                            <tr>
+                                <th>ಫೋಟೋ / Photo</th>
+                                <th>ಇಕೆವೈಸಿ ಪರಿಶೀಲಿಸಿದ ಆಧಾರ್ ಹೆಸರು / EKYC Verified Aadhar Name</th>
+                                <th>ಇಕೆವೈಸಿ ಪರಿಶೀಲಿಸಿದ ಆಧಾರ್ ಸಂಖ್ಯೆ / EKYC Verified Aadhar Number</th>
+                                <th>ಲಿಂಗ / Gender</th>
+                                <th>ಹುಟ್ಟಿದ ದಿನಾಂಕ / DOB</th>
+                                <th>ವಿಳಾಸ / Address</th>
+                                <th>ಇಕೆವೈಸಿ ಸ್ಥಿತಿ / EKYC Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {ownerData ? (
+                                <tr>
+                                    <td style={{ textAlign: 'center' }}> <img
+                                        src={bbmplogo}
+                                        alt="Owner"
+                                        width="50"
+                                        height="50"
+                                    />
+                                        {/* {ownerData.photoContent ? (
+                                               
+                                                <img
+                                                    src={`data:image/jpeg;base64,${ownerData.photoContent}`}
+                                                    alt="Owner"
+                                                    width="50"
+                                                    height="50"
+                                                />
+                                            ) : (
+                                                'N/A'
+                                            )} */}
+                                    </td>
+                                    <td style={{ textAlign: 'center' }}>{ownerData.ownerNameEng || 'N/A'}</td>
+                                    <td style={{ textAlign: 'center' }}>{ownerData.maskedAadhaar || 'N/A'}</td>
+                                    <td style={{ textAlign: 'center' }}>{ownerData.gender || 'N/A'}</td>
+                                    <td style={{ textAlign: 'center' }}>{ownerData.dateOfBirth || 'N/A'}</td>
+                                    <td style={{ textAlign: 'center' }}>{ownerData.addressEng || 'N/A'}</td>
+                                    <td style={{ textAlign: 'center' }}>{ownerData.aadhaarHash ? 'Verified' : 'Not Verified'}</td>
+                                </tr>
+                            ) : (
+                                <tr>
+                                    <td colSpan="7" className="text-center">Loading...</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+
+
+                </div>
+            </div>
         </div>
     );
 };
@@ -5329,39 +6191,7 @@ const DeclarationBlock = ({ rtc_AddedData, approval_details, order_details }) =>
         cursor: "pointer",
         fontSize: "16px"
     };
-    // const handleDownloadPDF = () => {
-    //     const input = document.getElementById('modal-content'); // Wrapper div for content
 
-    //     html2canvas(input, {scale: 2 }).then((canvas) => {
-    //         const imgData = canvas.toDataURL('image/png');
-    //         const pdf = new jsPDF('p', 'mm', 'a4');
-
-    //         const imgWidth = 210; // A4 width
-    //         const pageHeight = 297; // A4 height
-    //         const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    //         let heightLeft = imgHeight;
-    //         let position = 0;
-
-    //         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    //         heightLeft -= pageHeight;
-
-    //         while (heightLeft > 0) {
-    //             position = heightLeft - imgHeight;
-    //             pdf.addPage();
-    //             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    //             heightLeft -= pageHeight;
-    //         }
-
-    //         // Generate filename with current date and time
-    //         const now = new Date();
-    //         const dateString = now.toLocaleDateString('en-GB').split('/').reverse().join('-');
-    //         const timeString = now.toTimeString().split(' ')[0].replace(/:/g, '-');
-    //         const fileName = `${dateString}_${timeString}_layout_khata_details.pdf`;
-
-    //         pdf.save(fileName);
-    //     });
-    // };
 
     const handleDownloadPDF = async () => {
         const input = document.getElementById('modal-content');
@@ -5369,7 +6199,6 @@ const DeclarationBlock = ({ rtc_AddedData, approval_details, order_details }) =>
             console.error('Element with ID "modal-content" not found.');
             return;
         }
-
         try {
             const canvas = await html2canvas(input, {
                 scale: 2,
@@ -5418,7 +6247,6 @@ const DeclarationBlock = ({ rtc_AddedData, approval_details, order_details }) =>
             console.error('Error generating or saving PDF:', error);
         }
     };
-
     useEffect(() => {
         console.log("Updated RTC Data:", rtc_AddedData);
         console.log("Updated Approval Data:", approval_details);
